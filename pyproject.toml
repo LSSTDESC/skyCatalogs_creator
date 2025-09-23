@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools >= 61.0"] # PEP 621 compliant
+build-backend = "setuptools.build_meta"
+
+[project]
+dynamic = ["version"]
+name = "skyCatalogs_creator"
+description = "Writes catalogs input to LSST DESC simulations"
+readme = "README.md"
+authors = [{ name = "Joanne Bogart", email = "jrb@slac.stanford.edu" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+keywords = ["desc", "python", "catalog", "simulation"]
+dependencies = [
+    'astropy',
+    'astro-datalab'[full],
+    'dust_extinction',
+    'dustmaps',
+    'esutil',
+    'galsim',
+    'gitpython',
+    'h5py',
+    'healpy',
+    'lsst-sphgeom',
+    'lsstdesc_diffsky',
+    'lsstdesc-gcr-catalogs[full]',
+    'numpy',
+    'pandas',
+    'pyarrow',
+    'pyerfa',
+    'pyyaml',
+    'skyCatalogs',
+]
+requires-python = ">=3.10" # For annotations; setuptools >= 61.0 support
+
+[tool.setuptools.dynamic]
+version = {attr = "skycatalogs_creator._version.__version__"}
+
+# No package data yet
+# [tool.setuptools]
+# include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["./"]
+namespaces = false
+exclude = ["tests/*"]
+
+# [tool.setuptools.package-data]
+# "skycatalogs" = [
+# 	      "data/row_groups/*.parquet",
+# 	      "data/row_groups/*.yaml",
+# 	      "data/gaia_dr2/*.dat",
+# 	      "data/gaia_dr2/*.txt",
+# 	      "data/ci_sample/*.parquet",
+# 	      "data/ci_sample/README",
+#               "data/ci_sample/*.yaml",
+# 	      "data/ci_sample/repo/*.*",
+# 	      "data/ci_sample/repo/refcats/*/*.fits"
+# ]
+
+# [tool.coverage.run]
+# branch = true
+
+# [tool.coverage.report]
+# # Regexes for lines to exclude from consideration
+# exclude_also = [
+#     # Don't complain about missing debug-only code:
+#     "def __repr__",
+#     "if self\\.debug",
+
+#     # Don't complain if tests don't hit defensive assertion code:
+#     "raise AssertionError",
+#     "raise NotImplementedError",
+
+#     # Don't complain if non-runnable code isn't run:
+#     "if 0:",
+#     "if __name__ == .__main__.:",
+
+#     # Don't complain about abstract methods, they aren't run:
+#     "@(abc\\.)?abstractmethod",
+#     ]
+
+# ignore_errors = true
+
+# [tool.coverage.html]
+# directory = "coverage_html_report"
