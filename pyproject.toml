@@ -15,7 +15,7 @@ classifiers = [
 keywords = ["desc", "python", "catalog", "simulation"]
 dependencies = [
     'astropy',
-    'astro-datalab'[full],
+    'astro-datalab[full]',
     'dust_extinction',
     'dustmaps',
     'esutil',

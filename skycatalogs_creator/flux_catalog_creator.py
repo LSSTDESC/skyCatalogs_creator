@@ -112,7 +112,7 @@ class FluxCatalogCreator:
         Might want to add a way to specify template for output file name
         and template for input sedLookup file name.
         """
-        from skyCatalogs import open_catalog
+        from skycatalogs import open_catalog
 
         self._object_type = object_type
         if object_type.endswith('_galaxy'):

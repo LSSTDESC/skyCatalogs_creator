@@ -9,7 +9,7 @@ import pyarrow.parquet as pq
 from rubin_scheduler.utils import cartesian_from_spherical, spherical_from_cartesian
 from rubin_scheduler.utils import rotation_matrix_from_vectors, angular_separation
 from skycatalogs.skyCatalogs import open_catalog
-from skycatalogs.utils.parquet_schema_utils import make_galaxy_schema
+from skycatalogs_creator.utils.parquet_schema_utils import make_galaxy_schema
 from skycatalogs_creator.utils.creator_utils import make_MW_extinction_av
 from skycatalogs.utils import Disk
 
@@ -81,7 +81,7 @@ class FieldRotator(object):
         # defining the new field center is the x axis
         xx = np.dot(first_rotation, xyz)
         rng = np.random.RandomState(99)
-        mag = np.NaN
+        mag =np.nan         #  np.NaN
         while np.abs(mag) < 1.0e-20 or np.isnan(mag):
             random_vec = rng.random_sample(3)
             comp = np.dot(random_vec, xx)
@@ -237,9 +237,12 @@ class GalaxyRotator:
             print(f'{time.asctime()} Completed pixel {hp}')
 
 
-input_config = '/pscratch/sd/j/jrbogart/desc/skycatalogs/rehearsal/skyCatalog.yaml'
+#input_config = '/pscratch/sd/j/jrbogart/desc/skycatalogs/rehearsal/skyCatalog.yaml'
+
+skycatalog_root =  '/global/cfs/cdirs/descssim/imSim/skyCatalogs_cosmoDC2_v2.1'
+input_config = os.path.join(skycatalog_root, 'skyCatalog.yaml')
 rotated_dir = '/pscratch/sd/j/jrbogart/desc/skycatalogs/rotated_ops4'
-cat = open_catalog(input_config)
+cat = open_catalog(input_config, skycatalog_root=skycatalog_root)
 NSIDE = 32    # should really read from config
 
 # For ops rehearsal 3

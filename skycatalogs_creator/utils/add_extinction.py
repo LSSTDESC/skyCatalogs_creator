@@ -3,8 +3,8 @@ import pyarrow.parquet as pq
 import pyarrow as pa
 import pandas as pd
 
-from skycatalogs.utils.creator_utils import make_MW_extinction_av
-from skycatalogs.utils.creator_utils import make_MW_extinction_rv
+from .creator_utils import make_MW_extinction_av
+from .creator_utils import make_MW_extinction_rv
 
 
 class AddExtinction():
