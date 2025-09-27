@@ -1,0 +1,153 @@
+name: skyCatalogs CI
+
+on:
+    push:
+        branches:
+            - main
+            - releases/*
+
+    pull_request:
+        branches:
+            - main
+            - releases/*
+
+    schedule:
+      - cron: 0 23 * * 4
+
+jobs:
+    rubin_sim_data:
+        runs-on: ${{ matrix.os }}
+
+        strategy:
+            matrix:
+                os: [ ubuntu-latest ]
+                py: [ "3.12" ]
+                CC: [ gcc ]
+                CXX: [ g++ ]
+
+        defaults:
+            run:
+                # cf. https://github.com/conda-incubator/setup-miniconda#important
+                shell: bash -l {0}
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Cache files
+              uses: actions/cache@v4
+              id: cache-rubin-sim-data
+              env:
+                cache-name: cache-rubin-sim-data
+              with:
+                path: rubin_sim_data/
+                key: rubin_sim_data_files
+
+            - name: Install rubin_sim_data (if not cached)
+              if: ${{ steps.cache-rubin-sim-data.outputs.cache-hit != 'true' }}
+              run: |
+                echo ${{ steps.cache-rubin-sim-data.outputs.cache-hit }}
+                mkdir rubin_sim_data
+                mkdir rubin_sim_data/sims_sed_library
+                # Just get the throughputs and SED data for now.
+                curl https://s3df.slac.stanford.edu/groups/rubin/static/sim-data/rubin_sim_data/throughputs_2023_09_07.tgz | tar -C rubin_sim_data -xz
+                curl https://s3df.slac.stanford.edu/groups/rubin/static/sim-data/sed_library/seds_170124.tar.gz  | tar -C rubin_sim_data/sims_sed_library -xz
+
+
+    full-stack-build:
+        needs: [rubin_sim_data]
+        runs-on: ${{ matrix.os }}
+
+        strategy:
+            matrix:
+                os: [ ubuntu-latest ]
+                py: [ "3.12" ]
+                CC: [ gcc ]
+                CXX: [ g++ ]
+
+        defaults:
+            run:
+                # cf. https://github.com/conda-incubator/setup-miniconda#important
+                shell: bash -l {0}
+
+        steps:
+            - uses: actions/checkout@v4
+            - name: Setup conda
+              uses: conda-incubator/setup-miniconda@v3
+              with:
+                  activate-environment: stack
+                  python-version: ${{ matrix.py }}
+                  condarc-file: etc/.condarc
+
+            - name: Load cached files
+              uses: actions/cache@v4
+              id: cache-rubin-sim-data
+              env:
+                cache-name: cache-rubin-sim-data
+              with:
+                path: rubin_sim_data/
+                key: rubin_sim_data_files
+
+            - name: Install rubin_sim_data (if not cached)
+              if: ${{ steps.cache-rubin-sim-data.outputs.cache-hit != 'true' }}
+              run: |
+                mkdir rubin_sim_data
+                mkdir rubin_sim_data/sims_sed_library
+                # Just get the throughputs and SED data for now.
+                curl https://s3df.slac.stanford.edu/groups/rubin/static/sim-data/rubin_sim_data/throughputs_2023_09_07.tgz | tar -C rubin_sim_data -xz
+                curl https://s3df.slac.stanford.edu/groups/rubin/static/sim-data/sed_library/seds_170124.tar.gz  | tar -C rubin_sim_data/sims_sed_library -xz
+
+            - name: Install conda test deps
+              run: |
+                conda update -n base conda
+                conda info
+                conda list
+                conda install -y --file etc/conda_test_requirements.txt
+                conda info
+
+            - name: Install dependencies via conda
+              run: |
+                conda install -y --file etc/conda_requirements.txt
+
+            - name: Install pystellibs
+              run: |
+                git clone https://github.com/JoanneBogart/pystellibs.git
+                cd pystellibs
+                git checkout v1.0.0
+                pip install --no-build-isolation --no-deps -e .
+                cd ..
+
+            - name: Install skyCatalogs
+              run: |
+                git clone https://github.com/LSSTDESC/skyCatalogs.git
+                cd skyCatalogs
+                #  Change to release tag once we have one
+                git checkout u/jrbogart/API_only
+                pip install --no-build-isolation --no-deps -e .
+                cd ..
+
+            - name: Install skyCatalogs_creator
+              run: |
+                pip install .
+
+
+            - name: Run tests with the LSST Stack
+              run: |
+                export RUBIN_SIM_DATA_DIR=`pwd`/rubin_sim_data
+                export SIMS_SED_LIBRARY_DIR=${RUBIN_SIM_DATA_DIR}/sims_sed_library
+                export PYTHONPATH=`pwd`/pystellibs:${PYTHONPATH}
+
+                eups list lsst_distrib
+                python skycatalogs_creator/scripts/create_main --help
+                python skycatalogs_creator/scripts/create_flux --help
+                # setup -k -r .
+                # pytest --cov=skycatalogs --cov-report=xml --cov-report=term-missing tests/
+
+            # - name: Upload coverage to Codecov
+            #   uses: codecov/codecov-action@v5
+            #   with:
+            #     fail_ci_if_error: false
+            #     files: coverage.xml
+            #     flags: unittests
+            #     name: codecov-umbrella
+            #     token: ${{ secrets.CODECOV_TOKEN }}
+            #     verbose: true
