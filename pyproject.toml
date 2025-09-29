@@ -23,7 +23,6 @@ dependencies = [
     'gitpython',
     'h5py',
     'healpy',
-    'lsst-sphgeom',
     'lsstdesc_diffsky',
     'lsstdesc-gcr-catalogs[full]',
     'numpy',
