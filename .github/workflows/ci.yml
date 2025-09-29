@@ -120,6 +120,7 @@ jobs:
 
             - name: Install skyCatalogs
               run: |
+                pip install extension-helpers --no-build-isolation
                 git clone https://github.com/LSSTDESC/skyCatalogs.git
                 cd skyCatalogs
                 #  Change to release tag once we have one
