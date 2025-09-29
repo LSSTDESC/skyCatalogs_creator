@@ -129,7 +129,7 @@ jobs:
 
             - name: Install skyCatalogs_creator
               run: |
-                pip install .
+                pip install --no-build-isolation --no-deps .
 
 
             - name: Run tests with the LSST Stack
