@@ -127,9 +127,15 @@ jobs:
                 pip install --no-build-isolation --no-deps -e .
                 cd ..
 
+            - name: Install astro-datalab
+              run: |
+                pip install --no-build-isolation --no-deps astro-datalab
+
             - name: Install skyCatalogs_creator
               run: |
-                pip install --no-build-isolation --no-deps .
+                # pip install --no-build-isolation --no-deps -e .
+                pip install --no-build-isolation .
+
 
 
             - name: Run tests with the LSST Stack
@@ -140,8 +146,8 @@ jobs:
                 export PYTHONPATH=`pwd`:${PYTHONPATH}
 
                 eups list lsst_distrib
-                echo Working directory: `pwd`
-                echo PYTHONPATH: $PYTHONPATH
+                # echo Working directory: `pwd`
+                # echo PYTHONPATH: $PYTHONPATH
                 python skycatalogs_creator/scripts/create_main.py --help
                 python skycatalogs_creator/scripts/create_flux.py --help
                 # setup -k -r .
