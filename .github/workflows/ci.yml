@@ -134,8 +134,8 @@ jobs:
 
             - name: Install skyCatalogs_creator
               run: |
-                # pip install --no-build-isolation --no-deps -e .
-                pip install --no-build-isolation .
+                pip install --no-build-isolation --no-deps -e .
+                # pip install --no-build-isolation .
 
 
 
