@@ -4,6 +4,8 @@ on:
     push:
         branches:
             - main
+            # temporarily run ci on development branch push
+            - u/jrbogart/mini_ci
             - releases/*
 
     pull_request:
