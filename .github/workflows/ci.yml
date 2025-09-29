@@ -139,8 +139,8 @@ jobs:
                 export PYTHONPATH=`pwd`/pystellibs:${PYTHONPATH}
 
                 eups list lsst_distrib
-                python skycatalogs_creator/scripts/create_main --help
-                python skycatalogs_creator/scripts/create_flux --help
+                python skycatalogs_creator/scripts/create_main.py --help
+                python skycatalogs_creator/scripts/create_flux.py --help
                 # setup -k -r .
                 # pytest --cov=skycatalogs --cov-report=xml --cov-report=term-missing tests/
 
