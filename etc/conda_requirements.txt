@@ -4,3 +4,4 @@ stackvana>=0.2023.32
 gitpython
 dustmaps
 dust_extinction
+lsstdesc-gcr-catalogs
