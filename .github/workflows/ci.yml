@@ -135,9 +135,6 @@ jobs:
             - name: Install skyCatalogs_creator
               run: |
                 pip install --no-build-isolation --no-deps -e .
-                # pip install --no-build-isolation .
-
-
 
             - name: Run tests with the LSST Stack
               run: |
@@ -149,8 +146,13 @@ jobs:
                 eups list lsst_distrib
                 # echo Working directory: `pwd`
                 # echo PYTHONPATH: $PYTHONPATH
-                python skycatalogs_creator/scripts/create_main.py --help
-                python skycatalogs_creator/scripts/create_flux.py --help
+                export SCRIPTS=skycatalogs_creator/scripts
+                export CI_DATA=skycatalogs/data/ci
+                python ${SCRIPTS}/create_main.py --help
+                python ${SCRIPTS}/create_flux.py --help
+                python ${SCRIPTS}/create_main.py trilegal --skycatalog-root \
+                  ${CI_DATA} --pixels 9556
+
                 # setup -k -r .
                 # pytest --cov=skycatalogs --cov-report=xml --cov-report=term-missing tests/
 
