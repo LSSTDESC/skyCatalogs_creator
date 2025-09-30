@@ -147,7 +147,7 @@ jobs:
                 # echo Working directory: `pwd`
                 # echo PYTHONPATH: $PYTHONPATH
                 export SCRIPTS=skycatalogs_creator/scripts
-                export CI_DATA=skycatalogs/data/ci
+                export CI_DATA=skycatalogs_creator/data/ci
                 python ${SCRIPTS}/create_main.py --help
                 python ${SCRIPTS}/create_flux.py --help
                 python ${SCRIPTS}/create_main.py trilegal --skycatalog-root \
