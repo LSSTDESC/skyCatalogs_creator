@@ -144,24 +144,13 @@ jobs:
                 export PYTHONPATH=`pwd`:${PYTHONPATH}
 
                 eups list lsst_distrib
-                # echo Working directory: `pwd`
-                # echo PYTHONPATH: $PYTHONPATH
                 export SCRIPTS=skycatalogs_creator/scripts
                 export CI_DATA=skycatalogs_creator/data/ci
                 python ${SCRIPTS}/create_main.py --help
                 python ${SCRIPTS}/create_flux.py --help
                 python ${SCRIPTS}/create_main.py trilegal --skycatalog-root \
                   ${CI_DATA} --pixels 9556
-
-                # setup -k -r .
-                # pytest --cov=skycatalogs --cov-report=xml --cov-report=term-missing tests/
-
-            # - name: Upload coverage to Codecov
-            #   uses: codecov/codecov-action@v5
-            #   with:
-            #     fail_ci_if_error: false
-            #     files: coverage.xml
-            #     flags: unittests
-            #     name: codecov-umbrella
-            #     token: ${{ secrets.CODECOV_TOKEN }}
-            #     verbose: true
+                python ${SCRIPTS}/create_flux.py --object-type trilegal \
+                  --skycatalog-root ${CI_DATA} --flux-parallel 24 --pixels 9556
+                rm ${CI_DATA}/trilegal_9556.parquet
+                rm ${CI_DATA}/trilegal_flux_9556.parquet
