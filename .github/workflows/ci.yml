@@ -4,8 +4,6 @@ on:
     push:
         branches:
             - main
-            # temporarily run ci on development branch push
-            - u/jrbogart/mini_ci
             - releases/*
 
     pull_request:
@@ -135,11 +133,12 @@ jobs:
             - name: Install skyCatalogs_creator
               run: |
                 pip install --no-build-isolation --no-deps -e .
-
+                
             - name: Run tests with the LSST Stack
               run: |
                 export RUBIN_SIM_DATA_DIR=`pwd`/rubin_sim_data
                 export SIMS_SED_LIBRARY_DIR=${RUBIN_SIM_DATA_DIR}/sims_sed_library
+
                 export PYTHONPATH=`pwd`/pystellibs:`pwd`/skyCatalogs:${PYTHONPATH}
                 export PYTHONPATH=`pwd`:${PYTHONPATH}
 
@@ -154,3 +153,4 @@ jobs:
                   --skycatalog-root ${CI_DATA} --flux-parallel 24 --pixels 9556
                 rm ${CI_DATA}/trilegal_9556.parquet
                 rm ${CI_DATA}/trilegal_flux_9556.parquet
+
