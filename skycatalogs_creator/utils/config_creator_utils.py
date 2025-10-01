@@ -81,7 +81,10 @@ def assemble_provenance(pkg_root, inputs={}, run_options=None,
 
         git_d = {}
         git_d['git_hash'] = repo.commit().hexsha
-        git_d['git_branch'] = repo.active_branch.name
+        try:
+            git_d['git_branch'] = repo.active_branch.name
+        except TypeError:      # can happen in CI
+            git_d['git_branch'] = 'UNKNOWN'
         status = []
         if has_uncommited:
             status.append('UNCOMMITTED_FILES')
