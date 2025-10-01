@@ -108,6 +108,15 @@ class TrilegalMainCatalogCreator:
         from dl import queryClient as qc
         _NSIDE = 32
 
+        outpath = os.path.join(self._output_dir, f'trilegal_{hp}.parquet')
+        if os.path.exists(outpath):
+            if not self._catalog_creator._skip_done:
+                os.remove(outpath)
+                self._logger.info(f'Removed old version of {outpath}')
+            else:
+                self._logger.info(f'Skipping over existing file {outpath}')
+                return
+
         # Form queries and issue
         nrows = get_trilegal_hp_nrows(hp, nside=_NSIDE)
         out_nside, out_ring, query_pixels = find_trilegal_subpixels(hp, nrows)
@@ -124,7 +133,6 @@ class TrilegalMainCatalogCreator:
 
         so_far = 0
 
-        outpath = os.path.join(self._output_dir, f'trilegal_{hp}.parquet')
         writer = pq.ParquetWriter(outpath, arrow_schema)
 
         for pix in query_pixels:
@@ -315,6 +323,13 @@ class TrilegalFluxCatalogCreator:
         output_filename = f'trilegal_flux_{pixel}.parquet'
         output_path = os.path.join(self._catalog_creator._output_dir,
                                    output_filename)
+        if os.path.exists(output_path):
+            if not self._catalog_creator._skip_done:
+                os.remove(output_path)
+                self._logger.info(f'Removed old version of {output_path}')
+            else:
+                self._logger.info(f'Skipping regeneration of {output_path}')
+                return
 
         main_filename = f'trilegal_{pixel}.parquet'
         self._logger.info(f'Main file (input) is {main_filename}')

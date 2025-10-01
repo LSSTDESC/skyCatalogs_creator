@@ -250,7 +250,8 @@ class FluxCatalogCreator:
 
         if os.path.exists(output_path):
             if not self._skip_done:
-                self._logger.info(f'Overwriting file {output_path}')
+                os.remove(output_path)
+                self._logger.info(f'Removed old version of {output_path}')
             else:
                 self._logger.info(f'Skipping regeneration of {output_path}')
                 return
@@ -417,7 +418,8 @@ class FluxCatalogCreator:
 
         if os.path.exists(output_path):
             if not self._skip_done:
-                self._logger.info(f'Overwriting file {output_path}')
+                os.remove(output_path)
+                self._logger.info(f'Removed old version of {output_path}')
             else:
                 self._logger.info(f'Skipping regeneration of {output_path}')
                 return

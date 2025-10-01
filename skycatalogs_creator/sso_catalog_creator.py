@@ -231,8 +231,14 @@ class SsoFluxCatalogCreator:
 
         # global _sso_collection
         output_filename = f'sso_flux_{pixel}.parquet'
-        output_path = os.path.join(self._catalog_creator._output_dir,
-                                   output_filename)
+        output_path = os.path.join(self._output_dir, output_filename)
+        if os.path.exists(output_path):
+            if not self._catalog_creator._skip_done:
+                os.remove(output_path)
+                self._logger.info(f'Removed old version of {output_path}')
+            else:
+                self._logger.info(f'Skipping over existing file {output_path}')
+                return
 
         object_list = self._cat.get_object_type_by_hp(pixel, 'sso')
         n_parallel = self._catalog_creator._flux_parallel
