@@ -15,7 +15,7 @@ classifiers = [
 keywords = ["desc", "python", "catalog", "simulation"]
 dependencies = [
     'astropy',
-    'astro-datalab[full]',
+    'astro-datalab',
     'dust_extinction',
     'dustmaps',
     'esutil',
@@ -23,7 +23,6 @@ dependencies = [
     'gitpython',
     'h5py',
     'healpy',
-    'lsst-sphgeom',
     'lsstdesc_diffsky',
     'lsstdesc-gcr-catalogs[full]',
     'numpy',

@@ -1,0 +1,5 @@
+# Options file for creating a trilegal main catalog
+catalog_name: skyCatalog
+catalog_dir: .
+object_type: trilegal
+pixels: [9556]

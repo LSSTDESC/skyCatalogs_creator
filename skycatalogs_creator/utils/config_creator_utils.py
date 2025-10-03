@@ -81,7 +81,10 @@ def assemble_provenance(pkg_root, inputs={}, run_options=None,
 
         git_d = {}
         git_d['git_hash'] = repo.commit().hexsha
-        git_d['git_branch'] = repo.active_branch.name
+        try:
+            git_d['git_branch'] = repo.active_branch.name
+        except TypeError:      # can happen in CI
+            git_d['git_branch'] = 'UNKNOWN'
         status = []
         if has_uncommited:
             status.append('UNCOMMITTED_FILES')
@@ -284,17 +287,17 @@ class ConfigWriter:
                 # No change necessary
                 return
 
-            # Otherwise need to add or modify value for our object type
-            # First have to fix values for any other object types already
-            # mentions.  Value read in looks like "!include an_obj_type.yaml"
-            for k, v in top['object_types'].items():
-                cmps = v.split(' ')
-                new_value = IncludeValue(cmps[1])
-                top['object_types'][k] = new_value
+        # Otherwise need to add or modify value for our object type
+        # First have to fix values for any other object types already
+        # mentions.  Value read in looks like "!include an_obj_type.yaml"
+        for k, v in top['object_types'].items():
+            cmps = v.split(' ')
+            new_value = IncludeValue(cmps[1])
+            top['object_types'][k] = new_value
 
-            top['object_types'][object_type] = value
-            self.update_yaml(top, top_path)
-            return
+        top['object_types'][object_type] = value
+        self.update_yaml(top, top_path)
+        return
 
         # Write out top file from scratch, ignoring other object types
         # which may have been referenced in older version
