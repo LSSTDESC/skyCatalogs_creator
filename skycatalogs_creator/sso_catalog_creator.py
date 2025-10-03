@@ -234,8 +234,7 @@ class SsoFluxCatalogCreator:
         output_path = os.path.join(self._output_dir, output_filename)
         if os.path.exists(output_path):
             if not self._catalog_creator._skip_done:
-                os.remove(output_path)
-                self._logger.info(f'Removed old version of {output_path}')
+                self._logger.info(f'Overwriting {output_path}')
             else:
                 self._logger.info(f'Skipping over existing file {output_path}')
                 return

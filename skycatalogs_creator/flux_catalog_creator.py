@@ -142,6 +142,14 @@ class FluxCatalogCreator:
         self._cat = open_catalog(self.get_config_file_path(),
                                  skycatalog_root=self._skycatalog_root)
 
+        # if we're not skipping existing files (that is, we're overwriting)
+        # and the catalogs are partitioned by healpixel, tell skyCatalogs
+        # to ignore existing flux files for the healpixels we process
+        if self._object_type.endswith('galaxy'):
+            self._cat.ignore_files('galaxy', self._parts)
+        else:
+            self._cat.ignore_files(self._object_type, self._parts)
+
         self._logname = logname
         self._logger = logging.getLogger(logname)
         self._skip_done = skip_done
@@ -250,8 +258,7 @@ class FluxCatalogCreator:
 
         if os.path.exists(output_path):
             if not self._skip_done:
-                os.remove(output_path)
-                self._logger.info(f'Removed old version of {output_path}')
+                self._logger.info(f'Overwriting {output_path}')
             else:
                 self._logger.info(f'Skipping regeneration of {output_path}')
                 return
@@ -418,8 +425,7 @@ class FluxCatalogCreator:
 
         if os.path.exists(output_path):
             if not self._skip_done:
-                os.remove(output_path)
-                self._logger.info(f'Removed old version of {output_path}')
+                self._logger.info(f'Overwriting {output_path}')
             else:
                 self._logger.info(f'Skipping regeneration of {output_path}')
                 return
