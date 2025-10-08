@@ -110,9 +110,9 @@ jobs:
 
             - name: Install pystellibs
               run: |
-                git clone https://github.com/JoanneBogart/pystellibs.git
+                git clone https://github.com/mfouesneau/pystellibs.git
                 cd pystellibs
-                git checkout v1.0.0
+                # git checkout v1.0.0
                 pip install --no-build-isolation --no-deps -e .
                 cd ..
 
