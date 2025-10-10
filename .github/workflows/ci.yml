@@ -118,7 +118,6 @@ jobs:
 
             - name: Install skyCatalogs
               run: |
-                pip install extension-helpers --no-build-isolation
                 git clone https://github.com/LSSTDESC/skyCatalogs.git
                 cd skyCatalogs
                 #  Change to release tag once we have one
@@ -133,7 +132,7 @@ jobs:
             - name: Install skyCatalogs_creator
               run: |
                 pip install --no-build-isolation --no-deps -e .
-                
+
             - name: Run tests with the LSST Stack
               run: |
                 export RUBIN_SIM_DATA_DIR=`pwd`/rubin_sim_data
@@ -153,4 +152,3 @@ jobs:
                   --skycatalog-root ${CI_DATA} --flux-parallel 24 --pixels 9556
                 rm ${CI_DATA}/trilegal_9556.parquet
                 rm ${CI_DATA}/trilegal_flux_9556.parquet
-
