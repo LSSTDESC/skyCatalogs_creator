@@ -290,14 +290,15 @@ class ConfigWriter:
         # Otherwise need to add or modify value for our object type
         # First have to fix values for any other object types already
         # mentions.  Value read in looks like "!include an_obj_type.yaml"
-        for k, v in top['object_types'].items():
-            cmps = v.split(' ')
-            new_value = IncludeValue(cmps[1])
-            top['object_types'][k] = new_value
+        if top:
+            for k, v in top['object_types'].items():
+                cmps = v.split(' ')
+                new_value = IncludeValue(cmps[1])
+                top['object_types'][k] = new_value
 
-        top['object_types'][object_type] = value
-        self.update_yaml(top, top_path)
-        return
+            top['object_types'][object_type] = value
+            self.update_yaml(top, top_path)
+            return
 
         # Write out top file from scratch, ignoring other object types
         # which may have been referenced in older version
