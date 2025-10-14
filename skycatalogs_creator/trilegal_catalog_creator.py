@@ -124,7 +124,7 @@ class TrilegalMainCatalogCreator:
                      'label as evol_label', 'logte as logT', 'logg',
                      'logl as logL', 'z as Z',
                      'umag', 'gmag', 'rmag', 'imag', 'zmag', 'ymag']
-        # all_results = []
+
         rg_written = 0
         if out_ring:
             use_column = 'ring256'

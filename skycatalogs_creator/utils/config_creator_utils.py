@@ -1,11 +1,6 @@
 import os
-# import sys
 import yaml
-# import json
-# import pyarrow.parquet as pq
 import logging
-# from typing import Any
-# from collections import namedtuple
 from skycatalogs.utils.config_utils import Config, CURRENT_SCHEMA_VERSION
 from skycatalogs.utils.config_utils import YamlIncludeLoader
 from skycatalogs.utils.config_utils import YamlPassthruIncludeLoader

@@ -58,7 +58,6 @@ def _do_sso_flux_chunk(send_conn, sso_collection, instrument_needed,
 
 
 class SsoMainCatalogCreator:
-    # _sso_truth = '/sdf/home/j/jrb/rubin-user/sso/input/20feb2024'
     _sso_truth = '/sdf/data/rubin/shared/ops-rehearsals/ops-rehearsal-4/imSim_catalogs/inputs/sso'
     _sso_db_tbl = 'results'
 

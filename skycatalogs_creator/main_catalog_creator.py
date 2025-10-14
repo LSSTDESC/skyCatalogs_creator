@@ -576,7 +576,8 @@ class MainCatalogCreator:
         None
         """
         _star_db = '/global/cfs/cdirs/lsst/groups/SSim/DC2/dc2_stellar_healpixel.db'
-#        _star_parquet = '/global/cfs/cdirs/descssim/postDC2/UW_star_catalog'
+        #  Likely choices if format is parquet
+        #  _star_parquet = '/global/cfs/cdirs/descssim/postDC2/UW_star_catalog'
         _star_parquet = '/sdf/data/rubin/shared/ops-rehearsal-3/imSim_catalogs/UW_stars'
 
         if self._truth is None:
