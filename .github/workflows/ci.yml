@@ -112,7 +112,6 @@ jobs:
               run: |
                 git clone https://github.com/mfouesneau/pystellibs.git
                 cd pystellibs
-                # git checkout v1.0.0
                 pip install --no-build-isolation --no-deps -e .
                 cd ..
 
@@ -120,8 +119,7 @@ jobs:
               run: |
                 git clone https://github.com/LSSTDESC/skyCatalogs.git
                 cd skyCatalogs
-                #  Change to release tag once we have one
-                git checkout u/jrbogart/API_only
+                git checkout v2.3.0
                 pip install --no-build-isolation --no-deps -e .
                 cd ..
 
