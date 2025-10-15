@@ -139,7 +139,7 @@ jobs:
                 export PYTHONPATH=`pwd`/pystellibs/src:`pwd`/skyCatalogs:${PYTHONPATH}
                 export PYTHONPATH=`pwd`:${PYTHONPATH}
 
-		echo  $PYTHONPATH
+                echo  $PYTHONPATH
 
                 eups list lsst_distrib
                 export SCRIPTS=skycatalogs_creator/scripts
