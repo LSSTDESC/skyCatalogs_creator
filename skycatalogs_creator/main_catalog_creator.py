@@ -525,7 +525,8 @@ class MainCatalogCreator:
             output_path = os.path.join(self._output_dir, f'galaxy_{p}.parquet')
             if os.path.exists(output_path):
                 if not self._skip_done:
-                    self._logger.info(f'Overwriting file {output_path}')
+                    os.remove(output_path)
+                    self._logger.info(f'Removed old version of {output_path}')
                 else:
                     continue
 
@@ -575,7 +576,8 @@ class MainCatalogCreator:
         None
         """
         _star_db = '/global/cfs/cdirs/lsst/groups/SSim/DC2/dc2_stellar_healpixel.db'
-#        _star_parquet = '/global/cfs/cdirs/descssim/postDC2/UW_star_catalog'
+        #  Likely choices if format is parquet
+        #  _star_parquet = '/global/cfs/cdirs/descssim/postDC2/UW_star_catalog'
         _star_parquet = '/sdf/data/rubin/shared/ops-rehearsal-3/imSim_catalogs/UW_stars'
 
         if self._truth is None:
@@ -614,7 +616,8 @@ class MainCatalogCreator:
 
         if os.path.exists(output_path):
             if not self._skip_done:
-                self._logger.info(f'Overwriting file {output_path}')
+                os.remove(output_path)
+                self._logger.info(f'Removed old version of {output_path}')
             else:
                 self._logger.info(f'Skipping regeneration of {output_path}')
                 return

@@ -35,6 +35,7 @@ def make_galaxy_schema(logname, knots=True,
     if galaxy_type == 'cosmodc2':
         fields = [pa.field('galaxy_id', pa.int64()),
                   pa.field('ra', pa.float64(), True),
+                  # Consider adding metadata for units, e.g.
                   # metadata={"units" : "radians"}),
                   pa.field('dec', pa.float64(), True),
                   # metadata={"units" : "radians"}),

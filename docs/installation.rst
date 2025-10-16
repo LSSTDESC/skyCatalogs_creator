@@ -4,9 +4,7 @@ Installation Instructions
 .. note::
    **Prerequisites**:
 
-   To use **skyCatalogs_creator>=1.7.0**
-
-   all that is required is a reasonably current version of the  `LSST science pipelines <https://pipelines.lsst.io/>`_  and of the `skyCatalogs` package.
+   All that is required is a reasonably current version of the  `LSST science pipelines <https://pipelines.lsst.io/>`_  and of the `skyCatalogs` package.
    However, in order to generate catalogs for a particular object type some
    suitable source catalog must be read. Depending on the format of that
    catalog, you may need to install an additional library or two.
@@ -15,7 +13,7 @@ Installation steps common to all object type
 --------------------------------------------
 
 .. note::
-   These instructions are similar to imSim installation instructins.  If you've
+   These instructions are similar to imSim installation instructions.  If you've
    installed imSim already you can skip everything in this section except the
    installation of `skyCatalogs_creator` itself and ensuring you have a new
    enough version of `skyCatalogs`.
@@ -28,7 +26,9 @@ If you are working at the USDF (Rubin Project computing) or at NERSC (DESC compu
 
 The `CernVM file system <https://cvmfs.readthedocs.io/>`_  (cvmfs) is a distributed read-only file system developed at CERN for reliable low-maintenance world-wide software distribution.  LSST-France distributes weekly builds of the Rubin science pipelines for both Linux and MacOS.  Details and installation instructions can  be found at `sw.lsst.eu <https://sw.lsst.eu/index.html>`_ .  The distribution includes conda and skyCatalogs dependencies from conda-forge along with the science pipelines.
 
-ejhkcbkthiuitibvdgtejgrgdjhhjdvtflgcglgedglcLoad and setup the science pipelines
+.. _setup_pipelines:
+
+Load and setup the science pipelines
 ++++++++++++++++++++++++++++++++++++
 
 First you need to setup the science pipelines.  This involves sourcing a setup file and then using the Rubin *eups* commands to set them up.
@@ -67,50 +67,19 @@ If you do not intend to do any development you may choose instead to clone the m
 
 .. _trilegal
 
-Accessing trilegal objects
+Creating trilegal catalogs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In order to access the trilegal objects you need to install the pystellibs package.  You can do something like this:
+In order to create trilegal catalogs you need to install the pystellibs and astro-datalab packages.  You can do something like this:
 
 .. code-block :: sh
 
-   git clone https://github.com/JoanneBogart/pystellibs.git
+   git clone https://github.com/mfouesneau/pystellibs.git
    cd pystellibs
-   git checkout v1.0.0
-   pip install  --user --no-deps --nobuild-isolation -e .
+   pip install  --user --no-deps --nobuild-isolation  .
    cd ..
+   pip install --no-build-isolation --no-deps astro-datalab
 
-.. _per-session:
-
-Per-session Setup
-~~~~~~~~~~~~~~~~~~
-
-Here is a ``skycatalogs-setup.sh`` file you can use before each session
-
-.. code-block:: sh
-
-   source /cvmfs/...            # as above
-   setup lsst_distrib
-
-   export SKYCATALOGS_HOME=*PUT YOUR INSTALL DIRECTORY HERE*
-
-   setup -k -r $SKYCATALOGS_HOME/skyCatalogs
-
-You may want to add the per-session setup needed for the data files
-(:ref:`install-data-files`) and, if applicable, for trilegal objects.
-
-If you are using trilegal objects you also need to make sure your installation of pystellibs is accessible.  If not, and assuming PYTHONPATH is not null
-
-.. code-block:: sh
-
-   export PYTHONPATH=${SKYCATALOGS_HOME/pystellibs}:${PYTHONPATH}
-
-Now go to section :ref:`install-data-files` below.
-
-.. _without-pipelines:
-
-Install without LSST science pipelines
---------------------------------------
 
 Install skyCatalogs
 ~~~~~~~~~~~~~~~~~~~
@@ -121,23 +90,10 @@ All you need to do is pip install:
 
    pip install skyCatalogs
 
-Per-session setup
-~~~~~~~~~~~~~~~~~
-
-Every session you will also need to define a ``SKYCATALOGS_HOME`` directory
-where other needed files (see section :ref:`install-data-files` below) will go:
-
-.. code-block:: sh
-
-   export SKYCATALOGS_HOME=*PUT YOUR INSTALL DIRECTORY HERE*
-
 .. _install-data-files:
 
 Install needed data files
 -------------------------
-
-This step is necessary whether or not you are installing with LSST science pipelines.
-
 Go to your `SKYCATALOGS_HOME` directory and download some needed data files (you will only need to do this once).
 
 .. code-block:: sh
@@ -146,12 +102,35 @@ Go to your `SKYCATALOGS_HOME` directory and download some needed data files (you
    curl https://s3df.slac.stanford.edu/groups/rubin/static/sim-data/rubin_sim_data/throughputs_2023_09_07.tgz | tar -C rubin_sim_data -xz
    curl https://s3df.slac.stanford.edu/groups/rubin/static/sim-data/sed_library/seds_170124.tar.gz  | tar -C rubin_sim_data/sims_sed_library -xz
 
-The following exports must be done every session, not just when installing the data files.
+   
+.. _per-session:
+
+Per-session setup
+~~~~~~~~~~~~~~~~~
+
+Every session you will need to initialize the lsst pipelines distribution and
+define a ``SKYCATALOGS_HOME`` directory where other needed files (see e.g. section :ref:`install-data-files`) go:
 
 .. code-block:: sh
 
+   source /cvmfs/...            # as above
+   setup lsst_distrib
+
+   export SKYCATALOGS_HOME=*PUT YOUR INSTALL DIRECTORY HERE*
+   setup -k -r $SKYCATALOGS_HOME/skyCatalogs
+
+   # For data files
    export RUBIN_SIM_DATA_DIR=$SKYCATALOGS_HOME/rubin_sim_data
    export SIMS_SED_LIBRARY_DIR=$SKYCATALOGS_HOME/rubin_sim_data/sims_sed_library
+   
+
+If you're creating trilegal catalogs you also need to make pystellibs and
+the Astro Datalab software accessible.
+You may need to do something like this:
+
+.. code-block:: sh
+
+   export PYTHONPATH=${SKYCATALOGS_HOME}/pystellibs/src:${PYTHONPATH}
 
 Using skyCatalogs
 -----------------

@@ -1,11 +1,6 @@
 import os
-# import sys
 import yaml
-# import json
-# import pyarrow.parquet as pq
 import logging
-# from typing import Any
-# from collections import namedtuple
 from skycatalogs.utils.config_utils import Config, CURRENT_SCHEMA_VERSION
 from skycatalogs.utils.config_utils import YamlIncludeLoader
 from skycatalogs.utils.config_utils import YamlPassthruIncludeLoader
@@ -81,7 +76,10 @@ def assemble_provenance(pkg_root, inputs={}, run_options=None,
 
         git_d = {}
         git_d['git_hash'] = repo.commit().hexsha
-        git_d['git_branch'] = repo.active_branch.name
+        try:
+            git_d['git_branch'] = repo.active_branch.name
+        except TypeError:      # can happen in CI
+            git_d['git_branch'] = 'UNKNOWN'
         status = []
         if has_uncommited:
             status.append('UNCOMMITTED_FILES')
@@ -284,9 +282,10 @@ class ConfigWriter:
                 # No change necessary
                 return
 
-            # Otherwise need to add or modify value for our object type
-            # First have to fix values for any other object types already
-            # mentions.  Value read in looks like "!include an_obj_type.yaml"
+        # Otherwise need to add or modify value for our object type
+        # First have to fix values for any other object types already
+        # mentions.  Value read in looks like "!include an_obj_type.yaml"
+        if top:
             for k, v in top['object_types'].items():
                 cmps = v.split(' ')
                 new_value = IncludeValue(cmps[1])
