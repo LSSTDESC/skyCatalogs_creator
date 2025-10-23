@@ -45,21 +45,19 @@ def compare(file1, file2, object_type='trilegal', cat_type='main',
         print(f'{n_row_1} rows in {file1}')
         print(f'{n_row_2} rows in {file2}')
 
-    assert pq_file1.metadata.num_rows == pq_file2.metadata.num_rows, 'Same number of rows'
-
-    # if args.debug:
-    #     print("Number of rows is identical")
+    assert n_row_1 == n_row_2
 
     # Number of rows should be small so it's safe to assume a single row group.
     tbl1 = pq_file1.read_row_group(0, columns=cols)
     tbl2 = pq_file2.read_row_group(0, columns=cols)
 
     for c in cols:
-        assert tbl1[c] == tbl2[c], f'Column {c} is identical'
+        assert tbl1[c] == tbl2[c]
+        #  , f'Column {c} is identical'
         # For floats should optionally check instead if they're close
 
-        # if args.debug:
-        #    print(f"Column {c} is identical")
+        if debug:
+            print(f"Column {c} is identical")
 
 
 def write_selected(input_path, output_path, selected, debug=False):
