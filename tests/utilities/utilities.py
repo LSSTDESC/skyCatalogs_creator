@@ -7,7 +7,7 @@ import numpy.ma as ma
 
 
 def compare(file1, file2, object_type='trilegal', cat_type='main',
-            exact=True):
+            exact=True, debug=False):
     if object_type == 'pointsource':
         obj = 'star'
     else:
@@ -38,6 +38,13 @@ def compare(file1, file2, object_type='trilegal', cat_type='main',
     pq_file1 = pq.ParquetFile(file1)
     pq_file2 = pq.ParquetFile(file2)
 
+    n_row_1 = pq_file1.metadata.num_rows
+    n_row_2 = pq_file1.metadata.num_rows
+
+    if debug:
+        print(f'{n_row_1} rows in {file1}')
+        print(f'{n_row_2} rows in {file2}')
+
     assert pq_file1.metadata.num_rows == pq_file2.metadata.num_rows, 'Same number of rows'
 
     # if args.debug:
@@ -55,7 +62,7 @@ def compare(file1, file2, object_type='trilegal', cat_type='main',
         #    print(f"Column {c} is identical")
 
 
-def write_selected(input_path, output_path, selected):
+def write_selected(input_path, output_path, selected, debug=False):
     '''
     Parameters
     ----------
@@ -66,6 +73,10 @@ def write_selected(input_path, output_path, selected):
 
     in_file = pq.ParquetFile(input_path)
     n_gp = in_file.metadata.num_row_groups
+    if debug:
+        print('write_selected')
+        print(f'Selecting {len(selected)} objects')
+        print(f'Input file has {n_gp} row groups')
     schema = in_file.schema
     rgp = in_file.read_row_group(0)
 
