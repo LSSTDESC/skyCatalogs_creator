@@ -8,7 +8,7 @@ import os
 # from pathlib import Path
 import numpy as np
 import pyarrow.parquet as pq
-from .utilities import compare, write_selected
+from utilities.utilities import compare, write_selected
 
 
 class TrilegalCompare(unittest.TestCase):
