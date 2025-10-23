@@ -144,11 +144,14 @@ jobs:
                 eups list lsst_distrib
                 export SCRIPTS=skycatalogs_creator/scripts
                 export CI_DATA=skycatalogs_creator/data/ci
+                export TRILEGAL_PIXEL=9556
                 python ${SCRIPTS}/create_main.py --help
                 python ${SCRIPTS}/create_flux.py --help
                 python ${SCRIPTS}/create_main.py trilegal --skycatalog-root \
-                  ${CI_DATA} --pixels 9556
+                  ${CI_DATA} --pixels $TRILEGAL_PIXEL
                 python ${SCRIPTS}/create_flux.py --object-type trilegal \
-                  --skycatalog-root ${CI_DATA} --flux-parallel 24 --pixels 9556
-                rm ${CI_DATA}/trilegal_9556.parquet
-                rm ${CI_DATA}/trilegal_flux_9556.parquet
+                  --skycatalog-root ${CI_DATA} --flux-parallel 24 --pixels $TRILEGAL_PIXEL
+                pytest tests
+
+                # This should be done after running compare test
+                rm ${CI_DATA}/*.parquet
