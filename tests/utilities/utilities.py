@@ -52,9 +52,12 @@ def compare(file1, file2, object_type='trilegal', cat_type='main',
     tbl2 = pq_file2.read_row_group(0, columns=cols)
 
     for c in cols:
-        assert tbl1[c] == tbl2[c]
-        #  , f'Column {c} is identical'
-        # For floats should optionally check instead if they're close
+        if debug:
+            print(f'Comparing column {c}')
+        if c in floats:
+            assert np.isclose(np.array(tbl1[c]), np.array(tbl2[c]), atol=0)
+        else:
+            assert tbl1[c] == tbl2[c]
 
         if debug:
             print(f"Column {c} is identical")
