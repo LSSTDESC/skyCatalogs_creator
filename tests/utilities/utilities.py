@@ -58,7 +58,8 @@ def compare(file1, file2, object_type='trilegal', cat_type='main',
             print(f'Lens from tbl2: {len(tbl2[c])}, {len(np.array(tbl2[c]))}')
         if c in floats:
             assert np.isclose(np.array(tbl1[c], dtype="float32"),
-                              np.array(tbl2[c], dtype="float32"), atol=0).all()
+                              np.array(tbl2[c], dtype="float32"), atol=0,
+                              equal_nan=True).all()
         else:
             assert tbl1[c] == tbl2[c]
 
