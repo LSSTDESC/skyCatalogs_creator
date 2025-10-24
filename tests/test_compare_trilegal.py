@@ -59,12 +59,15 @@ class TrilegalCompare(unittest.TestCase):
         standard_main = os.path.join(standard_dir, main_name)
         standard_flux = os.path.join(standard_dir, flux_name)
 
+        new_main = os.path.join(new_dir, main_name)
+        new_flux = os.path.join(new_dir, flux_name)
+
         # sparsify
         ixes = self.extracted_indices(standard_main)
         sparse_main = os.path.join(new_dir, 'sparse_' + main_name)
-        write_selected(standard_main, sparse_main, ixes, debug=True)
+        write_selected(new_main, sparse_main, ixes, debug=True)
         sparse_flux = os.path.join(new_dir, 'sparse_' + flux_name)
-        write_selected(standard_flux, sparse_flux, ixes, debug=True)
+        write_selected(new_flux, sparse_flux, ixes, debug=True)
 
         # compare
         compare(standard_main, sparse_main, debug=True)
