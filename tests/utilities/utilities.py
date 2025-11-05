@@ -13,23 +13,24 @@ def compare(file1, file2, object_type='trilegal', cat_type='main',
     else:
         obj = object_type
 
-    cols = []
+    if obj.endswith('galaxy'):
+        id_name = 'galaxy_id'
+    else:
+        id_name = 'id'
+
+    cols = [id_name]
     if cat_type == 'flux':
         cols.append('lsst_flux_r')
-        if obj.endswith('galaxy'):
-            cols.append('galaxy_id')
-        else:
-            cols.append('id')
     else:      # main
         cols.extend(['ra', 'dec'])
         if obj.endswith('galaxy'):
-            cols.extend(['galaxy_id', 'MW_av', 'redshift'])
+            cols.extend(['MW_av', 'redshift'])
         elif obj == 'star':
-            cols.extend(['id', 'MW_av', 'magnorm'])
+            cols.extend(['MW_av', 'magnorm'])
         elif obj == 'sso':
-            cols.extend(['id', 'mjd', 'trailed_source_mag'])
+            cols.extend(['mjd', 'trailed_source_mag'])
         elif obj == 'trilegal':
-            cols.extend(['id', 'logT', 'imag'])
+            cols.extend(['logT', 'imag'])
 
     # Keep track of which columns are floating point.  Exact match might
     # not be a reasoable condition

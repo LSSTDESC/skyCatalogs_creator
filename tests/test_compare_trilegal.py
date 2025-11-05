@@ -5,10 +5,15 @@ standard.
 
 import unittest
 import os
-# from pathlib import Path
+from pathlib import Path
 import numpy as np
 import pyarrow.parquet as pq
 from utilities.utilities import compare, write_selected
+
+PACKAGE_DIR = os.path.dirname(os.path.abspath(str(Path(__file__).parent)))
+CI_DATA = os.path.join(PACKAGE_DIR, 'skycatalogs_creator', 'data', 'ci')
+CI_SAMPLE = os.path.join(PACKAGE_DIR, 'skycatalogs_creator', 'data',
+                         'ci_sample')
 
 
 class TrilegalCompare(unittest.TestCase):
@@ -46,12 +51,10 @@ class TrilegalCompare(unittest.TestCase):
         ones so rows match those in the standard ones.
         '''
 
-        # Find the newly-generated files
-        new_dir = os.getenv('CI_DATA')
-        pixel = os.getenv('TRILEGAL_PIXEL')
+        pixel = os.getenv('TRILEGAL_PIXEL', default='9556')
 
         # Find dir for standard files
-        standard_dir = os.path.join(new_dir, '..', 'ci_sample')
+        standard_dir = CI_SAMPLE
 
         main_name = f'trilegal_{pixel}.parquet'
         flux_name = f'trilegal_flux_{pixel}.parquet'
@@ -59,14 +62,14 @@ class TrilegalCompare(unittest.TestCase):
         standard_main = os.path.join(standard_dir, main_name)
         standard_flux = os.path.join(standard_dir, flux_name)
 
-        new_main = os.path.join(new_dir, main_name)
-        new_flux = os.path.join(new_dir, flux_name)
+        new_main = os.path.join(CI_DATA, main_name)
+        new_flux = os.path.join(CI_DATA, flux_name)
 
         # sparsify
         ixes = self.extracted_indices(standard_main)
-        sparse_main = os.path.join(new_dir, 'sparse_' + main_name)
+        sparse_main = os.path.join(CI_DATA, 'sparse_' + main_name)
         write_selected(new_main, sparse_main, ixes, debug=True)
-        sparse_flux = os.path.join(new_dir, 'sparse_' + flux_name)
+        sparse_flux = os.path.join(CI_DATA, 'sparse_' + flux_name)
         write_selected(new_flux, sparse_flux, ixes, debug=True)
 
         # compare

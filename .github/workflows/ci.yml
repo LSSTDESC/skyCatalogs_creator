@@ -144,6 +144,7 @@ jobs:
                 eups list lsst_distrib
                 export SCRIPTS=skycatalogs_creator/scripts
                 export CI_DATA=skycatalogs_creator/data/ci
+                export CI_GCR=skycatalogs_creator/data/ci_sample
                 export TRILEGAL_PIXEL=9556
                 python ${SCRIPTS}/create_main.py --help
                 python ${SCRIPTS}/create_flux.py --help
@@ -153,5 +154,6 @@ jobs:
                   --skycatalog-root ${CI_DATA} --flux-parallel 24 --pixels $TRILEGAL_PIXEL
                 pytest tests
 
-                # This should be done after running compare test
+                # Clean up after running compare tests
                 rm ${CI_DATA}/*.parquet
+                rm ${CI_DATA}/*.yaml
