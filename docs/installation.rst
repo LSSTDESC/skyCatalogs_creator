@@ -35,7 +35,7 @@ First you need to setup the science pipelines.  This involves sourcing a setup f
 
 .. note::
 
-   Version  ``w_2024_20`` or later of the science pipelines is recommended. This will guarantee other dependencies of skyCatalogs, such as GalSim, are new enough.
+   Version  ``w_2025_28`` or later of the science pipelines is recommended. This will guarantee other dependencies of skyCatalogs, such as GalSim, are new enough.
 
    Also note: the cvmfs distribution is a read-only distribution.  This means you cannot add packages to the included conda environment and packages you install via *pip* will be installed in the user area.  If you need a *conda*  environment you will need to use a different installation method.
 
@@ -43,7 +43,7 @@ Source the appropriate setup script (note the -ext in the name) and then setup t
 
 .. code-block:: sh
 
-   source /cvmfs/sw.lsst.eu/linux-x86_64/lsst_distrib/w_2024_20/loadLSST-ext.bash
+   source /cvmfs/sw.lsst.eu/almalinux-x86_64/lsst_distrib/w_2025_28/loadLSST-ext.bash
    setup lsst_distrib
 
 
