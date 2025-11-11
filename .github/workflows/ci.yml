@@ -110,44 +110,50 @@ jobs:
 
             - name: Install pystellibs
               run: |
-                git clone https://github.com/JoanneBogart/pystellibs.git
+                git clone https://github.com/mfouesneau/pystellibs.git
                 cd pystellibs
-                git checkout v1.0.0
-                pip install --no-build-isolation --no-deps -e .
+                pip install --no-build-isolation --no-deps .
                 cd ..
 
             - name: Install skyCatalogs
               run: |
                 git clone https://github.com/LSSTDESC/skyCatalogs.git
                 cd skyCatalogs
-                #  Change to release tag once we have one
-                git checkout u/jrbogart/API_only
+                git checkout v2.3.0
                 pip install --no-build-isolation --no-deps -e .
                 cd ..
 
+            - name: Install astro-datalab
+              run: |
+                pip install --no-build-isolation --no-deps astro-datalab
+
             - name: Install skyCatalogs_creator
               run: |
-                pip install .
-
+                pip install --no-build-isolation --no-deps -e .
 
             - name: Run tests with the LSST Stack
               run: |
                 export RUBIN_SIM_DATA_DIR=`pwd`/rubin_sim_data
                 export SIMS_SED_LIBRARY_DIR=${RUBIN_SIM_DATA_DIR}/sims_sed_library
-                export PYTHONPATH=`pwd`/pystellibs:${PYTHONPATH}
+
+                export PYTHONPATH=`pwd`/pystellibs/src:`pwd`/skyCatalogs:${PYTHONPATH}
+                export PYTHONPATH=`pwd`:${PYTHONPATH}
+
+                echo  $PYTHONPATH
 
                 eups list lsst_distrib
-                python skycatalogs_creator/scripts/create_main --help
-                python skycatalogs_creator/scripts/create_flux --help
-                # setup -k -r .
-                # pytest --cov=skycatalogs --cov-report=xml --cov-report=term-missing tests/
+                export SCRIPTS=skycatalogs_creator/scripts
+                export CI_DATA=skycatalogs_creator/data/ci
+                export CI_GCR=skycatalogs_creator/data/ci_sample
+                export TRILEGAL_PIXEL=9556
+                python ${SCRIPTS}/create_main.py --help
+                python ${SCRIPTS}/create_flux.py --help
+                python ${SCRIPTS}/create_main.py trilegal --skycatalog-root \
+                  ${CI_DATA} --pixels $TRILEGAL_PIXEL
+                python ${SCRIPTS}/create_flux.py --object-type trilegal \
+                  --skycatalog-root ${CI_DATA} --flux-parallel 24 --pixels $TRILEGAL_PIXEL
+                pytest tests
 
-            # - name: Upload coverage to Codecov
-            #   uses: codecov/codecov-action@v5
-            #   with:
-            #     fail_ci_if_error: false
-            #     files: coverage.xml
-            #     flags: unittests
-            #     name: codecov-umbrella
-            #     token: ${{ secrets.CODECOV_TOKEN }}
-            #     verbose: true
+                # Clean up after running compare tests
+                rm ${CI_DATA}/*.parquet
+                rm ${CI_DATA}/*.yaml

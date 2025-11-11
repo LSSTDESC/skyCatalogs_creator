@@ -173,7 +173,8 @@ class MainCatalogCreator:
         catalog_dir     Directory relative to skycatalog_root where catalog
                         will be written.  Defaults to '.'
         truth           GCRCatalogs name or abs. path for input truth catalog
-                        Default depends on object type
+                        Default depends on object type.
+                        The value 'GCR_CI' gets special handling
         config_path     Where to write config file. Default is data
                         directory.
         catalog_name    If a config file is written this value is saved
@@ -192,7 +193,7 @@ class MainCatalogCreator:
         dc2             Whether to adjust values to provide input comparable
                         to that for the DC2 run
         star_input_fmt  May be either 'sqlite' or 'parquet'
-        run_options     The options the outer script (create_sc.py) was
+        run_options     The options the outer script (create_main.py) was
                         called with
 
         Might want to add a way to specify template for output file name
@@ -317,8 +318,27 @@ class MainCatalogCreator:
             self._galaxy_type = 'diffsky'
             if self._truth is None:
                 self._truth = _diffsky_cat
-
-        gal_cat = GCRCatalogs.load_catalog(self._truth)
+        if self._truth != 'GCR_CI':
+            gal_cat = GCRCatalogs.load_catalog(self._truth)
+        else:
+            # Special handling for CI.  The config file is not
+            # part of the normal GCRCatalogs collection and the
+            # root dir where the data are stored is also non-standard
+            if self._galaxy_type == 'cosmodc2':
+                GCRCatalogs.ConfigSource.set_config_source(dr=False)
+                ci_gcr = os.getenv('CI_GCR')
+                gcr_root = os.path.join(ci_gcr, 'gcr_root_dir')
+                GCRCatalogs.set_root_dir(gcr_root)
+                config_path = os.path.join(ci_gcr, 'gcr_catalog_configs',
+                                           'cosmodc2_galaxy_mini.yaml')
+                config_dict = GCRCatalogs.catalog_helpers.load_yaml_local(config_path)
+                # Since the config file doesn't get read in at the usual
+                # time we have to do resolution of root dir by hand.
+                config_register = GCRCatalogs.ConfigSource.get_config_source()
+                resolved = config_register.resolve_root_dir(config_dict)
+                gal_cat = GCRCatalogs.load_catalog_from_config_dict(resolved)
+            else:
+                raise NotImplementedError(f'No CI for {self._galaxy_type} galaxies')
         self._gal_cat = gal_cat
 
         # Save cosmology in case we need to write parameters out later
@@ -525,7 +545,8 @@ class MainCatalogCreator:
             output_path = os.path.join(self._output_dir, f'galaxy_{p}.parquet')
             if os.path.exists(output_path):
                 if not self._skip_done:
-                    self._logger.info(f'Overwriting file {output_path}')
+                    os.remove(output_path)
+                    self._logger.info(f'Removed old version of {output_path}')
                 else:
                     continue
 
@@ -575,7 +596,8 @@ class MainCatalogCreator:
         None
         """
         _star_db = '/global/cfs/cdirs/lsst/groups/SSim/DC2/dc2_stellar_healpixel.db'
-#        _star_parquet = '/global/cfs/cdirs/descssim/postDC2/UW_star_catalog'
+        #  Likely choices if format is parquet
+        #  _star_parquet = '/global/cfs/cdirs/descssim/postDC2/UW_star_catalog'
         _star_parquet = '/sdf/data/rubin/shared/ops-rehearsal-3/imSim_catalogs/UW_stars'
 
         if self._truth is None:
@@ -614,7 +636,8 @@ class MainCatalogCreator:
 
         if os.path.exists(output_path):
             if not self._skip_done:
-                self._logger.info(f'Overwriting file {output_path}')
+                os.remove(output_path)
+                self._logger.info(f'Removed old version of {output_path}')
             else:
                 self._logger.info(f'Skipping regeneration of {output_path}')
                 return

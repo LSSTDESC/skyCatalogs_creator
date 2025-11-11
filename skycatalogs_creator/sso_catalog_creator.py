@@ -58,7 +58,6 @@ def _do_sso_flux_chunk(send_conn, sso_collection, instrument_needed,
 
 
 class SsoMainCatalogCreator:
-    # _sso_truth = '/sdf/home/j/jrb/rubin-user/sso/input/20feb2024'
     _sso_truth = '/sdf/data/rubin/shared/ops-rehearsals/ops-rehearsal-4/imSim_catalogs/inputs/sso'
     _sso_db_tbl = 'results'
 
@@ -231,8 +230,13 @@ class SsoFluxCatalogCreator:
 
         # global _sso_collection
         output_filename = f'sso_flux_{pixel}.parquet'
-        output_path = os.path.join(self._catalog_creator._output_dir,
-                                   output_filename)
+        output_path = os.path.join(self._output_dir, output_filename)
+        if os.path.exists(output_path):
+            if not self._catalog_creator._skip_done:
+                self._logger.info(f'Overwriting {output_path}')
+            else:
+                self._logger.info(f'Skipping over existing file {output_path}')
+                return
 
         object_list = self._cat.get_object_type_by_hp(pixel, 'sso')
         n_parallel = self._catalog_creator._flux_parallel

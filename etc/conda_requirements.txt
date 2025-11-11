@@ -1,0 +1,8 @@
+# conda install --file etc/conda_requirements should install all required dependencies of imSim including a conda based version of the Rubin pipelines.
+
+stackvana>=0.2025.28
+gitpython
+dustmaps
+dust_extinction
+extension-helpers
+lsstdesc-gcr-catalogs
