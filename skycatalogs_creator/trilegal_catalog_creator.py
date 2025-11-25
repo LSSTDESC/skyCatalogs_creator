@@ -246,7 +246,8 @@ def _do_trilegal_flux_chunk(send_conn, collection, instrument_needed,
 
     pq_main = pq.ParquetFile(main_path)
 
-    wl, spectra = factory.get_spectra_batch(pq_main, row_group, l_bnd, u_bnd)
+    # wl, spectra = factory.get_spectra_batch(pq_main, row_group, l_bnd, u_bnd)
+    seds = factory.get_spectra_batch(pq_main, row_group, l_bnd, u_bnd)
     if debug:
         now = datetime.now().isoformat()[:19]
         print(f'{now} Spectra computed', flush=True)
@@ -255,21 +256,21 @@ def _do_trilegal_flux_chunk(send_conn, collection, instrument_needed,
     imag = collection.get_native_attribute('imag')
     out_dict['id'] = id[l_bnd: u_bnd]
     fluxes = []
+    sed_ix = 0
     for ix in range(l_bnd, u_bnd):
         obj_fluxes = []
-        lut = galsim.LookupTable(wl, spectra[ix - l_bnd], interpolant='linear')
-        sed = galsim.SED(lut, wave_type='nm', flux_type='flambda')
-        sed = extinguisher.extinguish(sed, av[ix])
+        sed = seds[sed_ix]
 
         if sed is None:
             obj_fluxes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         else:
-            # Normalize; calculate fluxes
-            sed = sed.withMagnitude(imag[ix], tri_lsst_bandpasses['i'])
+            # Apply extinction; calculate fluxes
+            sed = extinguisher.extinguish(sed, av[ix])
             for band in LSST_BANDS:
                 obj_fluxes.append(collection[ix].get_LSST_flux(
                     band, sed=sed, cache=False))
         fluxes.append(obj_fluxes)
+        sed_ix += 1
 
     colnames = [f'lsst_flux_{band}' for band in LSST_BANDS]
     fluxes_transpose = zip(*fluxes)
