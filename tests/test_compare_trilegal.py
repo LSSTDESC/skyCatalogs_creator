@@ -65,6 +65,19 @@ class TrilegalCompare(unittest.TestCase):
         new_main = os.path.join(CI_DATA, main_name)
         new_flux = os.path.join(CI_DATA, flux_name)
 
+        # Create new files if they don't already exist
+        # (They should exist if called from within GitHub CI)
+        if not os.path.isfile(new_main):
+            from skycatalogs_creator.main_catalog_creator import MainCatalogCreator
+            main_creator = MainCatalogCreator(
+                'trilegal', [9556], skycatalog_root=CI_DATA)
+            main_creator.create()
+        if not os.path.isfile(new_flux):
+            from skycatalogs_creator.flux_catalog_creator import FluxCatalogCreator
+            flux_creator = FluxCatalogCreator(
+                'trilegal', [9556], skycatalog_root=CI_DATA, flux_parallel=20)
+            flux_creator.create()
+
         # sparsify
         ixes = self.extracted_indices(standard_main)
         sparse_main = os.path.join(CI_DATA, 'sparse_' + main_name)
