@@ -246,7 +246,6 @@ def _do_trilegal_flux_chunk(send_conn, collection, instrument_needed,
 
     pq_main = pq.ParquetFile(main_path)
 
-    # wl, spectra = factory.get_spectra_batch(pq_main, row_group, l_bnd, u_bnd)
     seds = factory.get_spectra_batch(pq_main, row_group, l_bnd, u_bnd)
     if debug:
         now = datetime.now().isoformat()[:19]
