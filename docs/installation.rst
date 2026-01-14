@@ -136,23 +136,20 @@ You may need to do something like this:
 
    export PYTHONPATH=${SKYCATALOGS_HOME}/pystellibs/src:${PYTHONPATH}
 
-Using skyCatalogs
------------------
+Using skyCatalogs_creator
+-------------------------
 
-You should now be able to import the code you need from the skyCatalogs package, e.g.
+For object types handled by this package, the ouput catalog files are of two
+types: main files and flux files.  For the most part main files contain
+quantities directly read from an upstream source, including everything
+needed to compute fluxes.  The flux files are created in a separate step,
+using the information stored in the main files.
 
-.. code-block:: python
+To create main files, use the script `create_main.py` in subdirectory
+`skycatalogs_creator/scripts`. For flux files use
+`create_flux.py`. To see what options are available type
 
-   from skycatalogs.skyCatalogs import open_catalog
-   from skycatalogs.utils.shapes import Disk
+.. code_block:: sh
 
-   skycatalog_root = "path_to/skycatalog_files"  # folder containing catalog
-   config_file = "some_folder/skyCatalog.yaml"
-
-   cat = open_catalog(config_file, skycatalog_root=skycatalog_root)
-
-   # define disk at ra, dec = 45.0, -9.0 of radius 100 arcseconds
-   disk = disk(45.0, -9.0, 100.0)
-
-   # get galaxies and stars in the region
-   objects = cat.get_objects_by_region(disk, obj_type_set={'galaxy', 'star'})
+   python skycatalogs/creator/scripts/create_main.py --help
+   python skycatalogs/creator/scripts/create_flux.py --help
