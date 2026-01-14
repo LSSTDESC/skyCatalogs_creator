@@ -149,7 +149,7 @@ To create main files, use the script `create_main.py` in subdirectory
 `skycatalogs_creator/scripts`. For flux files use
 `create_flux.py`. To see what options are available type
 
-.. code_block:: sh
+.. code-block:: sh
 
    python skycatalogs/creator/scripts/create_main.py --help
    python skycatalogs/creator/scripts/create_flux.py --help
