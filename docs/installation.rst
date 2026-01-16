@@ -153,3 +153,5 @@ To create main files, use the script `create_main.py` in subdirectory
 
    python skycatalogs/creator/scripts/create_main.py --help
    python skycatalogs/creator/scripts/create_flux.py --help
+
+See also the page "Creating New Catalogs" in this site.
