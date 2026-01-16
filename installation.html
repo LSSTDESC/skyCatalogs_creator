@@ -1,0 +1,248 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Installation Instructions &mdash; skyCatalogs_creator 1.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=292eb321"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Creating New Catalogs" href="usage_create.html" />
+    <link rel="prev" title="skyCatalogs_creator: creates simulated object catalogs" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            skyCatalogs_creator
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation Instructions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation-steps-common-to-all-object-type">Installation steps common to all object type</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#installing-lsst-science-pipelines">Installing LSST science pipelines</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#load-and-setup-the-science-pipelines">Load and setup the science pipelines</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#install-skycatalogs">Install skyCatalogs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#creating-trilegal-catalogs">Creating trilegal catalogs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#install-skycatalogs-creator">Install skyCatalogs_creator</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#install-needed-data-files">Install needed data files</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#per-session-setup">Per-session setup</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#using-skycatalogs-creator">Using skyCatalogs_creator</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage_create.html">Creating New Catalogs</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">skyCatalogs_creator</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Installation Instructions</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/installation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <style>
+.wy-table-responsive table td,.wy-table-responsive table th{white-space:normal}
+</style><section id="installation-instructions">
+<h1>Installation Instructions<a class="headerlink" href="#installation-instructions" title="Link to this heading"></a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>Prerequisites</strong>:</p>
+<p>All that is required is a reasonably current version of the  <a class="reference external" href="https://pipelines.lsst.io/">LSST science pipelines</a>  and of the <cite>skyCatalogs</cite> package.
+However, in order to generate catalogs for a particular object type some
+suitable source catalog must be read. Depending on the format of that
+catalog, you may need to install an additional library or two.</p>
+</div>
+<section id="installation-steps-common-to-all-object-type">
+<h2>Installation steps common to all object type<a class="headerlink" href="#installation-steps-common-to-all-object-type" title="Link to this heading"></a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>These instructions are similar to imSim installation instructions.  If you’ve
+installed imSim already you can skip everything in this section except the
+installation of <cite>skyCatalogs_creator</cite> itself and ensuring you have a new
+enough version of <cite>skyCatalogs</cite>.</p>
+</div>
+<section id="installing-lsst-science-pipelines">
+<h3>Installing LSST science pipelines<a class="headerlink" href="#installing-lsst-science-pipelines" title="Link to this heading"></a></h3>
+<p>There are several methods of installation.  Only the simplest (using a prebuilt cvmfs version) is described here.  For other methods, see the imSim installation instructions.</p>
+<p>If you are working at the USDF (Rubin Project computing) or at NERSC (DESC computing), perhaps the easiest way to setup and use <em>skyCatalogs_creator</em> is to rely on the prebuilt versions of the pipelines contained in the cvmfs distribution which is installed there.  This solution is also appropriate for personal laptops and university/lab based computing systems if you are able to install the <em>cvmfs</em> system.</p>
+<p>The <a class="reference external" href="https://cvmfs.readthedocs.io/">CernVM file system</a>  (cvmfs) is a distributed read-only file system developed at CERN for reliable low-maintenance world-wide software distribution.  LSST-France distributes weekly builds of the Rubin science pipelines for both Linux and MacOS.  Details and installation instructions can  be found at <a class="reference external" href="https://sw.lsst.eu/index.html">sw.lsst.eu</a> .  The distribution includes conda and skyCatalogs dependencies from conda-forge along with the science pipelines.</p>
+<section id="load-and-setup-the-science-pipelines">
+<span id="setup-pipelines"></span><h4>Load and setup the science pipelines<a class="headerlink" href="#load-and-setup-the-science-pipelines" title="Link to this heading"></a></h4>
+<p>First you need to setup the science pipelines.  This involves sourcing a setup file and then using the Rubin <em>eups</em> commands to set them up.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Version  <code class="docutils literal notranslate"><span class="pre">w_2025_49</span></code> or later of the science pipelines is recommended. This will guarantee other dependencies of skyCatalogs, such as GalSim, are new enough.</p>
+<p>Also note: the cvmfs distribution is a read-only distribution.  This means you cannot add packages to the included conda environment and packages you install via <em>pip</em> will be installed in the user area.  If you need a <em>conda</em>  environment you will need to use a different installation method.</p>
+</div>
+<p>Source the appropriate setup script (note the -ext in the name) and then setup the distribution (if you are on MacOS use darwin-x86_64 instead of linux-x86_64).</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">source</span><span class="w"> </span>/cvmfs/sw.lsst.eu/almalinux-x86_64/lsst_distrib/w_2025_28/loadLSST-ext.bash
+setup<span class="w"> </span>lsst_distrib
+</pre></div>
+</div>
+</section>
+</section>
+<section id="install-skycatalogs">
+<h3>Install skyCatalogs<a class="headerlink" href="#install-skycatalogs" title="Link to this heading"></a></h3>
+<p>Clone the skyCatalogs package from GitHub.  Here we assume you are in
+your installation directory SKYCATALOGS_HOME as described in the section <a class="reference internal" href="#per-session"><span class="std std-ref">Per-session setup</span></a> below.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/LSSTDESC/skyCatalogs
+</pre></div>
+</div>
+<p>at this point if you would only like to use <em>skyCatalogs</em> you can  <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">skyCatalog/</span></code> however we instead suggest using the <em>eups</em> tool to simply setup the package for use without installing it. This will allow you to edit the package in place, use multiple versions, change branches etc. You should definitely do this if you plan to do any <em>skyCatalogs</em> or <em>skyCatalogs_creator</em> development.</p>
+<p>If you do not intend to do any development you may choose instead to clone or pip install the most recent release tag.  It should be at least v2.4.0.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/LSSTDESC/skyCatalogs.git<span class="w"> </span>--branch<span class="w"> </span>v2.4.0
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>skyCatalogs
+</pre></div>
+</div>
+</section>
+<section id="creating-trilegal-catalogs">
+<h3>Creating trilegal catalogs<a class="headerlink" href="#creating-trilegal-catalogs" title="Link to this heading"></a></h3>
+<p>In order to create trilegal catalogs you need to install the pystellibs and astro-datalab packages.  You can do something like this:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/mfouesneau/pystellibs.git
+<span class="nb">cd</span><span class="w"> </span>pystellibs
+pip<span class="w"> </span>install<span class="w">  </span>--user<span class="w"> </span>--no-deps<span class="w"> </span>--nobuild-isolation<span class="w">  </span>.
+<span class="nb">cd</span><span class="w"> </span>..
+pip<span class="w"> </span>install<span class="w"> </span>--no-build-isolation<span class="w"> </span>--no-deps<span class="w"> </span>astro-datalab
+</pre></div>
+</div>
+</section>
+<section id="install-skycatalogs-creator">
+<h3>Install skyCatalogs_creator<a class="headerlink" href="#install-skycatalogs-creator" title="Link to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/LSSTDESC/skyCatalogs_creator.git
+</pre></div>
+</div>
+</section>
+</section>
+<section id="install-needed-data-files">
+<span id="install-data-files"></span><h2>Install needed data files<a class="headerlink" href="#install-needed-data-files" title="Link to this heading"></a></h2>
+<p>Go to your <cite>SKYCATALOGS_HOME</cite> directory and download some needed data files (you will only need to do this once).</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>mkdir<span class="w"> </span>-p<span class="w"> </span>rubin_sim_data/sims_sed_library
+curl<span class="w"> </span>https://s3df.slac.stanford.edu/groups/rubin/static/sim-data/rubin_sim_data/throughputs_2023_09_07.tgz<span class="w"> </span><span class="p">|</span><span class="w"> </span>tar<span class="w"> </span>-C<span class="w"> </span>rubin_sim_data<span class="w"> </span>-xz
+curl<span class="w"> </span>https://s3df.slac.stanford.edu/groups/rubin/static/sim-data/sed_library/seds_170124.tar.gz<span class="w">  </span><span class="p">|</span><span class="w"> </span>tar<span class="w"> </span>-C<span class="w"> </span>rubin_sim_data/sims_sed_library<span class="w"> </span>-xz
+</pre></div>
+</div>
+<section id="per-session-setup">
+<span id="per-session"></span><h3>Per-session setup<a class="headerlink" href="#per-session-setup" title="Link to this heading"></a></h3>
+<p>Every session you will need to initialize the lsst pipelines distribution and
+define a <code class="docutils literal notranslate"><span class="pre">SKYCATALOGS_HOME</span></code> directory where other needed files (see e.g. section <a class="reference internal" href="#install-data-files"><span class="std std-ref">Install needed data files</span></a>) go:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">source</span><span class="w"> </span>/cvmfs/...<span class="w">            </span><span class="c1"># as above</span>
+setup<span class="w"> </span>lsst_distrib
+
+<span class="nb">export</span><span class="w"> </span><span class="nv">SKYCATALOGS_HOME</span><span class="o">=</span>*PUT<span class="w"> </span>YOUR<span class="w"> </span>INSTALL<span class="w"> </span>DIRECTORY<span class="w"> </span>HERE*
+setup<span class="w"> </span>-k<span class="w"> </span>-r<span class="w"> </span><span class="nv">$SKYCATALOGS_HOME</span>/skyCatalogs
+
+<span class="c1"># For data files</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">RUBIN_SIM_DATA_DIR</span><span class="o">=</span><span class="nv">$SKYCATALOGS_HOME</span>/rubin_sim_data
+<span class="nb">export</span><span class="w"> </span><span class="nv">SIMS_SED_LIBRARY_DIR</span><span class="o">=</span><span class="nv">$SKYCATALOGS_HOME</span>/rubin_sim_data/sims_sed_library
+</pre></div>
+</div>
+<p>If you’re creating trilegal catalogs you also need to make pystellibs and
+the Astro Datalab software accessible.
+You may need to do something like this:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">PYTHONPATH</span><span class="o">=</span><span class="si">${</span><span class="nv">SKYCATALOGS_HOME</span><span class="si">}</span>/pystellibs/src:<span class="si">${</span><span class="nv">PYTHONPATH</span><span class="si">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="using-skycatalogs-creator">
+<h2>Using skyCatalogs_creator<a class="headerlink" href="#using-skycatalogs-creator" title="Link to this heading"></a></h2>
+<p>For object types handled by this package, the ouput catalog files are of two
+types: main files and flux files.  For the most part main files contain
+quantities directly read from an upstream source, including everything
+needed to compute fluxes.  The flux files are created in a separate step,
+using the information stored in the main files.</p>
+<p>To create main files, use the script <cite>create_main.py</cite> in subdirectory
+<cite>skycatalogs_creator/scripts</cite>. For flux files use
+<cite>create_flux.py</cite>. To see what options are available type</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>skycatalogs/creator/scripts/create_main.py<span class="w"> </span>--help
+python<span class="w"> </span>skycatalogs/creator/scripts/create_flux.py<span class="w"> </span>--help
+</pre></div>
+</div>
+<p>See also the page “Creating New Catalogs” in this site.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="skyCatalogs_creator: creates simulated object catalogs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="usage_create.html" class="btn btn-neutral float-right" title="Creating New Catalogs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025-2026, LSSTDESC.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
