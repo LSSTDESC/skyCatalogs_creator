@@ -24,10 +24,17 @@ for most invocations and even fewer are required.  The options determine
 One particularly handy option, ``--options-file``, allows you to specify
 everything else as key-value pairs in a yaml file.
 
+.. note::
+   For create_main `object_type` is a positional argument.  If you use an
+   options file, it must be specified in both places.
+
 Options table
 +++++++++++++
-Here is the complete list of options as they appear in an options file.
-On the command line, prepend ``--`` and change all underscores to hyphens.
+Here is the complete list of options as they may appear in an options file as
+of January, 2026.
+
+On the command line, prepend ``--`` (except `object_type` since it's a
+positional parameter) and change all underscores to hyphens.
 
 =====================  =========  ============  ===============================
 Name                   Datatype   Default       Description
@@ -55,7 +62,8 @@ knots_magnitude_cut    float      27.0          Omit knots component from
 log_level              string     "INFO"        Log level
 no_knots               boolean    False         Omit knot component
 options_file           string     None          Path to file where other
-                                                options are set
+                                                options are set. Valid on
+                                                command line only.
 pixels                 int list   [9556]        healpix pixels for which
                                                 catalog will be created
 skip_done              boolean    False         do not overwrite existing files
@@ -74,9 +82,14 @@ The script ``create_flux.py`` and its options
 plus a couple new ones. Only ``object_type`` is required but several
 others are specified for most invocations.
 
+.. note::
+   For create_flux `object_type` is a keyword argument.  If you use an
+   options file, it must be specified in both places.
+
 Options table
 +++++++++++++
-Here is the complete list of options as they appear in an options file.
+Here is the complete list of options as of January, 2026 as they would appear
+in an options file.
 On the command line, prepend ``--`` and change all underscores to hyphens.
 
 =====================  =========  ============  ===============================
@@ -98,7 +111,8 @@ include_roman_flux     boolean    False         If True calculate & store Roman
                                                 as well as Rubin fluxes.
 log_level              string     "INFO"        Log level
 options_file           string     None          Path to file where other
-                                                options are set
+                                                options are set. Valid only
+                                                on command line.
 pixels                 int list   [9556]        healpix pixels for which
                                                 catalog will be created
 skip_done              boolean    False         do not overwrite existing files
