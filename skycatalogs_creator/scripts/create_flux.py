@@ -11,10 +11,16 @@ from skycatalogs_creator.flux_catalog_creator import FluxCatalogCreator
 from skycatalogs.utils.common_utils import print_date, log_callinfo
 from skycatalogs.utils.common_utils import callinfo_to_dict
 import multiprocessing as mp
+import platform
 
 if __name__ == '__main__':
 
-    mp.set_start_method('fork')
+    # Only support parallel processing for Linux. Other forms of unix such
+    # as BSD would probably be ok, but not macOS.
+    plat = platform.system()
+    if plat == 'Linux':
+        mp.set_start_method('fork')
+
     parser = argparse.ArgumentParser(
         description='''
     Create flux Sky Catalogs for specified object type''',
@@ -23,15 +29,17 @@ if __name__ == '__main__':
                         choices=['star', 'cosmodc2_galaxy', 'diffsky_galaxy',
                                  'sso', 'trilegal'],
                         help='Object type for which catalog is to be created')
-    parser.add_argument('--pixels', type=int, nargs='*', default=[9556],
-                        help='healpix pixels for which catalogs will be created')
+    parser.add_argument(
+        '--pixels', type=int, nargs='*', default=[9556],
+        help='healpix pixels for which catalogs will be created')
     parser.add_argument('--skycatalog-root',
                         help='''Root directory for sky catalogs, typically
                     site-dependent. If not specified, use value of
                     environment variable SKYCATALOG_ROOT''')
-    parser.add_argument('--catalog-dir', '--cat-dir',
-                        help='output file directory relative to skycatalog_root',
-                        default='.')
+    parser.add_argument(
+        '--catalog-dir', '--cat-dir',
+        help='output file directory relative to skycatalog_root',
+        default='.')
     parser.add_argument('--config-path', default=None, help='''
                     Directory containing config file. If no value,
                     config is assumed to be in same location as data,
@@ -44,7 +52,7 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--skip-done', action='store_true',
-        help='If supplied skip existing data files; else overwrite with message')
+        help='If supplied skip existing data files; else warn and overwrite')
     parser.add_argument(
         '--flux-parallel', default=16, type=int,
         help='Number of processes to run in parallel when computing fluxes')
@@ -67,7 +75,8 @@ if __name__ == '__main__':
                 if k in args:
                     args.__setattr__(k, opt_dict[k])
                 else:
-                    raise ValueError(f'Unknown attribute "{k}" in options file {args.options_file}')
+                    raise ValueError(
+                        f'Unknown attrib "{k}" in options {args.options_file}')
 
     if not args.object_type:
         raise ValueError('Missing object-type argument')
@@ -82,6 +91,13 @@ if __name__ == '__main__':
     ch.setFormatter(formatter)
 
     logger.addHandler(ch)
+
+    if plat != 'Linux' and args.flux_parallel > 1:
+        args.flux_parallel = 1
+        logger.info(
+            f'Parallel processing not supported on {plat}.')
+        logger.info(
+            'For platforms other than Linux all processing is sequential')
 
     log_callinfo('create_flux', args, logname)
 
