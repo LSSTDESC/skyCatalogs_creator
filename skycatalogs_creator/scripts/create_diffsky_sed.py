@@ -37,9 +37,9 @@ parser.add_argument('--galaxy-truth', help='''GCRCatalogs name for galaxy
 parser.add_argument('--rel-err', type=float, default=0.03, help='''
                     target tolerance for flux error''')
 parser.add_argument('--wave-ang-min', type=int, default=500,
-                    help='''Min wavelength to keep in SEDs''')
+                    help='''Min wavelength to keep in SEDs [angstrom]''')
 parser.add_argument('--wave-ang-max', type=int, default=100000,
-                    help='''Max wavelength to keep in SEDs''')
+                    help='''Max wavelength to keep in SEDs [angstrom]''')
 parser.add_argument('--n-per', type=int, default=100000, help='''
                     number of galaxies to be processed together''')
 parser.add_argument('--overwrite', action='store_true',

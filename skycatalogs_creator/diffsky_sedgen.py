@@ -79,8 +79,8 @@ class DiffskySedGenerator():
     skip_done       If false, overwrite existing files
     auto_loop       If true, immediately loop through pixels in 'parts'
     rel_err         Target relative tolerance for flux integral.
-    wave_ang_min    Minimum wavelength to keep in SEDs.
-    wave_ang_max    Maximum wavelength to keep in SEDs.
+    wave_ang_min    Minimum wavelength to keep in SEDs [angstrom].
+    wave_ang_max    Maximum wavelength to keep in SEDs [angstrom].
     n_per           Number of SEDs to batch calculate in diffsky.
                     Memory footprint increases nonlinearly with larger n_per
     sed_out         If SEDs are to go somewhere other than usual output_dir
@@ -135,8 +135,8 @@ class DiffskySedGenerator():
         Parameters
         ----------
         rel_err         Target relative tolerance for flux integral.
-        wave_ang_min    Minimum wavelength to keep in SEDs.
-        wave_ang_max    Maximum wavelength to keep in SEDs.
+        wave_ang_min    Minimum wavelength to keep in SEDs [angstrom].
+        wave_ang_max    Maximum wavelength to keep in SEDs [angstrom].
 
         Side-effects
         ------------
