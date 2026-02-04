@@ -1,4 +1,4 @@
-name: skyCatalogs CI
+name: skyCatalogs_creator CI
 
 on:
     push:
