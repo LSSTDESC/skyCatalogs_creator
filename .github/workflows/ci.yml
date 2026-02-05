@@ -127,6 +127,7 @@ jobs:
 
             - name: Install dependencies via conda
               run: |
+                gdk-pixbuf-query-loaders --update-cache
                 conda install -y --file etc/conda_requirements.txt
 
             - name: Install pystellibs
