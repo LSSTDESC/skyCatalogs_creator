@@ -128,7 +128,7 @@ jobs:
             - name: Install dependencies via conda
               run: |
                 # First install binutils, which contains addr2line
-                conda install -c conda-forge binutils
+                # conda install -c conda-forge binutils
                 conda install -y --file etc/conda_requirements.txt
 
             - name: Install pystellibs
@@ -148,6 +148,7 @@ jobs:
 
             - name: Install astro-datalab
               run: |
+                pip install --no-build-isolation --no-deps extension-helpers
                 pip install --no-build-isolation --no-deps astro-datalab
 
             - name: Install skyCatalogs_creator

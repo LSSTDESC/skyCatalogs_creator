@@ -4,5 +4,7 @@ stackvana>=0.2025.49
 gitpython
 dustmaps
 dust_extinction
-extension-helpers
+
+# move extension-helpers installation back to pip
+#extension-helpers
 lsstdesc-gcr-catalogs
