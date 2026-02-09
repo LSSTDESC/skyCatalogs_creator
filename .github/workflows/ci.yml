@@ -128,8 +128,8 @@ jobs:
 
             - name: Install dependencies via conda
               run: |
-                export CONDA_PREFIX=/usr/share/miniconda/envs/stack
-                conda install -y --file etc/conda_requirements.txt
+                # export CONDA_PREFIX=/usr/share/miniconda/envs/stack
+                conda install --prefix /usr/share/miniconda/envs/stack -y --file etc/conda_requirements.txt
 
             - name: Install pystellibs
               run: |
