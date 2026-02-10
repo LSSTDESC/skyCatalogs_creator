@@ -95,7 +95,8 @@ jobs:
             - name: Setup conda
               uses: conda-incubator/setup-miniconda@v3
               with:
-                auto-update-conda: true  
+                # auto-update-conda: true
+                miniconda-version: "<26"
                 activate-environment: stack
                 python-version: ${{ matrix.py }}
                 condarc-file: etc/.condarc
@@ -120,7 +121,7 @@ jobs:
 
             - name: Install conda test deps
               run: |
-                conda update -n base conda
+                # conda update -n base conda
                 conda info
                 conda list
                 conda install -y --file etc/conda_test_requirements.txt
@@ -128,7 +129,6 @@ jobs:
 
             - name: Install dependencies via conda
               run: |
-                # export CONDA_PREFIX=/usr/share/miniconda/envs/stack
                 conda install --prefix /usr/share/miniconda/envs/stack -y --file etc/conda_requirements.txt
 
             - name: Install pystellibs
@@ -140,7 +140,6 @@ jobs:
                 
             - name: Install astro-datalab
               run: |
-                # pip install --no-build-isolation --no-deps extension-helpers
                 pip install --no-build-isolation --no-deps astro-datalab
 
             - name: Install skyCatalogs
