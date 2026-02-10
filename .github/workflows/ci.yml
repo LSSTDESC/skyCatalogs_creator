@@ -95,8 +95,8 @@ jobs:
             - name: Setup conda
               uses: conda-incubator/setup-miniconda@v3
               with:
-                # auto-update-conda: true
-                miniconda-version: "25.11.1"
+                auto-update-conda: false
+                conda-version: "25.11.1"
                 activate-environment: stack
                 python-version: ${{ matrix.py }}
                 condarc-file: etc/.condarc
