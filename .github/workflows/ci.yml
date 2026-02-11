@@ -1,4 +1,4 @@
-name: skyCatalogs CI
+name: skyCatalogs_creator CI
 
 on:
     push:
@@ -95,9 +95,11 @@ jobs:
             - name: Setup conda
               uses: conda-incubator/setup-miniconda@v3
               with:
-                  activate-environment: stack
-                  python-version: ${{ matrix.py }}
-                  condarc-file: etc/.condarc
+                auto-update-conda: false
+                conda-version: "25.11.1"
+                activate-environment: stack
+                python-version: ${{ matrix.py }}
+                condarc-file: etc/.condarc
 
             - name: Load cached files
               uses: actions/cache@v4
@@ -119,7 +121,7 @@ jobs:
 
             - name: Install conda test deps
               run: |
-                conda update -n base conda
+                # conda update -n base conda
                 conda info
                 conda list
                 conda install -y --file etc/conda_test_requirements.txt
@@ -127,26 +129,19 @@ jobs:
 
             - name: Install dependencies via conda
               run: |
-                conda install -y --file etc/conda_requirements.txt
+                conda install --prefix /usr/share/miniconda/envs/stack -y --file etc/conda_requirements.txt
 
             - name: Install pystellibs
               run: |
-                git clone https://github.com/mfouesneau/pystellibs.git
-                cd pystellibs
-                pip install --no-build-isolation --no-deps .
-                cd ..
-
-            - name: Install skyCatalogs
-              run: |
-                git clone https://github.com/LSSTDESC/skyCatalogs.git
-                cd skyCatalogs
-                git checkout v2.4.0
-                pip install --no-build-isolation --no-deps -e .
-                cd ..
+                pip install --no-build-isolation --no-deps git+https://github.com/mfouesneau/pystellibs
 
             - name: Install astro-datalab
               run: |
                 pip install --no-build-isolation --no-deps astro-datalab
+
+            - name: Install skyCatalogs
+              run: |
+                pip install --no-build-isolation --no-deps git+https://github.com/LSSTDESC/skyCatalogs@v2.4.0
 
             - name: Install skyCatalogs_creator
               run: |
