@@ -133,22 +133,15 @@ jobs:
 
             - name: Install pystellibs
               run: |
-                git clone https://github.com/mfouesneau/pystellibs.git
-                cd pystellibs
-                pip install --no-build-isolation --no-deps .
-                cd ..
-                
+                pip install --no-build-isolation --no-deps git+https://github.com/mfouesneau/pystellibs
+
             - name: Install astro-datalab
               run: |
                 pip install --no-build-isolation --no-deps astro-datalab
 
             - name: Install skyCatalogs
               run: |
-                git clone https://github.com/LSSTDESC/skyCatalogs.git
-                cd skyCatalogs
-                git checkout v2.4.0
-                pip install --no-build-isolation --no-deps -e .
-                cd ..
+                pip install --no-build-isolation --no-deps git+https://github.com/LSSTDESC/skyCatalogs@v2.4.0
 
             - name: Install skyCatalogs_creator
               run: |

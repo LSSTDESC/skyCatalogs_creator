@@ -94,9 +94,9 @@ if __name__ == '__main__':
 
     if plat != 'Linux' and args.flux_parallel > 1:
         args.flux_parallel = 1
-        logger.info(
+        logger.warning(
             f'Parallel processing not supported on {plat}.')
-        logger.info(
+        logger.warning(
             'For platforms other than Linux all processing is sequential')
 
     log_callinfo('create_flux', args, logname)
