@@ -153,7 +153,6 @@ jobs:
                 export SIMS_SED_LIBRARY_DIR=${RUBIN_SIM_DATA_DIR}/sims_sed_library
 
                 export PYTHONPATH=`pwd`/pystellibs/src:`pwd`/skyCatalogs:${PYTHONPATH}
-                export PYTHONPATH=`pwd`:${PYTHONPATH}
 
                 echo  $PYTHONPATH
 
