@@ -392,8 +392,10 @@ class FluxCatalogCreator:
             throughputs_versions=thru_v)
 
         self._ps_flux_schema = make_star_flux_schema(self._logname,
+                                                     include_roman_flux=self._include_roman_flux,
                                                      metadata_input=file_metadata)
 
+        self._ps_flux_needed = [field.name for field in self._ps_flux_schema]
         self._flux_template = self._cat.raw_config['object_types']['star']['flux_file_template']
 
         self._logger.info('Creating pointsource flux files')
@@ -433,7 +435,12 @@ class FluxCatalogCreator:
 
         object_list = self._cat.get_object_type_by_hp(pixel, 'star')
         writer = None
-        instrument_needed = ['lsst']       # for now
+        instrument_needed = []
+        for field in self._ps_flux_needed:
+            if 'lsst' in field and 'lsst' not in instrument_needed:
+                instrument_needed.append('lsst')
+            if 'roman' in field and 'roman' not in instrument_needed:
+                instrument_needed.append('roman')
         rg_written = 0
         fields_needed = self._ps_flux_schema.names
 
