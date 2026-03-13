@@ -157,7 +157,7 @@ class FluxCatalogCreator:
         self._include_roman_flux = include_roman_flux
         self._obs_sed_factory = None
         self._sso_creator = SsoFluxCatalogCreator(self)
-        self._trilegal_creator = TrilegalFluxCatalogCreator(self)
+        self._trilegal_creator = TrilegalFluxCatalogCreator(self, include_roman_flux=self._include_roman_flux)
         self._run_options = run_options
         self._tophat_sed_bins = None
         self._sed_gen = None
