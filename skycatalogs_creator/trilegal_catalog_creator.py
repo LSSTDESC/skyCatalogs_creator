@@ -15,6 +15,7 @@ from skycatalogs.objects.base_object import LSST_BANDS, load_lsst_bandpasses
 from skycatalogs.objects.trilegal_object import TrilegalConfigFragment
 from .utils.config_creator_utils import assemble_provenance
 from .utils.config_creator_utils import assemble_file_metadata
+from .utils.parquet_schema_utils import make_star_flux_schema
 from skycatalogs.utils.trilegal_utils import get_trilegal_hp_nrows
 from skycatalogs.utils.trilegal_utils import find_trilegal_subpixels
 
@@ -300,25 +301,6 @@ class TrilegalFluxCatalogCreator:
         global tri_lsst_bandpasses
         tri_lsst_bandpasses = load_lsst_bandpasses()
 
-    def _create_flux_schema(self, metadata_input=None,
-                            metadata_key='provenance'):
-        # id and 6 flux fields (for now.  Maybe later also Roman)
-        fields = [
-            pa.field('id', pa.string()),
-            pa.field('lsst_flux_u', pa.float32(), True),
-            pa.field('lsst_flux_g', pa.float32(), True),
-            pa.field('lsst_flux_r', pa.float32(), True),
-            pa.field('lsst_flux_i', pa.float32(), True),
-            pa.field('lsst_flux_z', pa.float32(), True),
-            pa.field('lsst_flux_y', pa.float32(), True)]
-        if metadata_input:
-            metadata_bytes = json.dumps(metadata_input).encode('utf8')
-            final_metadata = {metadata_key: metadata_bytes}
-        else:
-            final_metadata = None
-
-        return pa.schema(fields, metadata=final_metadata)
-
     def _create_trilegal_flux_pixel(self, pixel, arrow_schema):
         output_filename = f'trilegal_flux_{pixel}.parquet'
         output_path = os.path.join(self._catalog_creator._output_dir,
@@ -442,7 +424,8 @@ class TrilegalFluxCatalogCreator:
             flux_file=True,
             throughputs_versions=thru_v)
 
-        arrow_schema = self._create_flux_schema(metadata_input=file_metadata)
+        arrow_schema = make_star_flux_schema(self._logger.name,
+                                             metadata_input=file_metadata)
 
         self._logger.info('Creating trilegal flux files')
 
