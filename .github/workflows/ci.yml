@@ -166,7 +166,8 @@ jobs:
                 python ${SCRIPTS}/create_main.py trilegal --skycatalog-root \
                   ${CI_DATA} --pixels $TRILEGAL_PIXEL
                 python ${SCRIPTS}/create_flux.py --object-type trilegal \
-                  --skycatalog-root ${CI_DATA} --flux-parallel 24 --pixels $TRILEGAL_PIXEL
+                  --skycatalog-root ${CI_DATA} --flux-parallel 24 --pixels $TRILEGAL_PIXEL \
+                  --include-roman-flux
                 pytest tests
 
                 # Clean up after running compare tests
