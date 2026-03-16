@@ -12,9 +12,11 @@ import numpy as np
 import json
 import galsim
 from skycatalogs.objects.base_object import LSST_BANDS, load_lsst_bandpasses
+from skycatalogs.objects.base_object import load_roman_bandpasses
 from skycatalogs.objects.trilegal_object import TrilegalConfigFragment
 from .utils.config_creator_utils import assemble_provenance
 from .utils.config_creator_utils import assemble_file_metadata
+from .utils.parquet_schema_utils import make_star_flux_schema
 from skycatalogs.utils.trilegal_utils import get_trilegal_hp_nrows
 from skycatalogs.utils.trilegal_utils import find_trilegal_subpixels
 
@@ -254,6 +256,8 @@ def _do_trilegal_flux_chunk(send_conn, collection, instrument_needed,
     id = collection.get_native_attribute('id')
     imag = collection.get_native_attribute('imag')
     out_dict['id'] = id[l_bnd: u_bnd]
+
+    # Compute LSST fluxes
     fluxes = []
     sed_ix = 0
     for ix in range(l_bnd, u_bnd):
@@ -261,7 +265,7 @@ def _do_trilegal_flux_chunk(send_conn, collection, instrument_needed,
         sed = seds[sed_ix]
 
         if sed is None:
-            obj_fluxes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            obj_fluxes = [0.0]*len(LSST_BANDS)
         else:
             # Apply extinction; calculate fluxes
             sed = extinguisher.extinguish(sed, av[ix])
@@ -277,6 +281,32 @@ def _do_trilegal_flux_chunk(send_conn, collection, instrument_needed,
     out_dict.update(flux_dict)
     del fluxes_transpose
 
+    # Compute Roman fluxes if requested
+    if 'roman' in instrument_needed:
+        roman_bandpasses = load_roman_bandpasses(include_all_bands=True)
+        roman_fluxes = []
+        sed_ix = 0
+        for ix in range(l_bnd, u_bnd):
+            obj_fluxes = []
+            sed = seds[sed_ix]
+
+            if sed is None:
+                obj_fluxes = [0.0] * len(roman_bandpasses)
+            else:
+                # Apply extinction; calculate Roman fluxes
+                sed = extinguisher.extinguish(sed, av[ix])
+                for band in roman_bandpasses:
+                    obj_fluxes.append(collection[ix].get_roman_flux(
+                        band, sed=sed, cache=False))
+            roman_fluxes.append(obj_fluxes)
+            sed_ix += 1
+
+        colnames = [f'roman_flux_{band}' for band in roman_bandpasses]
+        roman_fluxes_transpose = zip(*roman_fluxes)
+        roman_flux_dict = dict(zip(colnames, roman_fluxes_transpose))
+        out_dict.update(roman_flux_dict)
+        del roman_fluxes_transpose
+
     if debug:
         now = datetime.now().isoformat()[:19]
         print(f'{now}  Leaving _do_trilegal_flux_chunk, l_bnd={l_bnd}, row_group={row_group}', flush=True)
@@ -288,7 +318,7 @@ def _do_trilegal_flux_chunk(send_conn, collection, instrument_needed,
 
 
 class TrilegalFluxCatalogCreator:
-    def __init__(self, catalog_creator):
+    def __init__(self, catalog_creator, include_roman_flux=False):
         '''
         Parameters
         ----------
@@ -297,27 +327,9 @@ class TrilegalFluxCatalogCreator:
         self._catalog_creator = catalog_creator
         self._output_dir = catalog_creator._output_dir
         self._logger = catalog_creator._logger
+        self._include_roman_flux = include_roman_flux
         global tri_lsst_bandpasses
         tri_lsst_bandpasses = load_lsst_bandpasses()
-
-    def _create_flux_schema(self, metadata_input=None,
-                            metadata_key='provenance'):
-        # id and 6 flux fields (for now.  Maybe later also Roman)
-        fields = [
-            pa.field('id', pa.string()),
-            pa.field('lsst_flux_u', pa.float32(), True),
-            pa.field('lsst_flux_g', pa.float32(), True),
-            pa.field('lsst_flux_r', pa.float32(), True),
-            pa.field('lsst_flux_i', pa.float32(), True),
-            pa.field('lsst_flux_z', pa.float32(), True),
-            pa.field('lsst_flux_y', pa.float32(), True)]
-        if metadata_input:
-            metadata_bytes = json.dumps(metadata_input).encode('utf8')
-            final_metadata = {metadata_key: metadata_bytes}
-        else:
-            final_metadata = None
-
-        return pa.schema(fields, metadata=final_metadata)
 
     def _create_trilegal_flux_pixel(self, pixel, arrow_schema):
         output_filename = f'trilegal_flux_{pixel}.parquet'
@@ -340,6 +352,9 @@ class TrilegalFluxCatalogCreator:
         writer = pq.ParquetWriter(output_path, arrow_schema)
 
         instrument_needed = ['lsst']
+        if self._include_roman_flux:
+            instrument_needed.append('roman')
+
         rg_written = 0
         writer = None
         fields_needed = arrow_schema.names
@@ -436,13 +451,17 @@ class TrilegalFluxCatalogCreator:
         self._main_template = trilegal_config['file_template']
 
         thru_v = {'lsst_throughputs_version': self._cat._lsst_thru_v}
+        if self._include_roman_flux:
+            thru_v['roman_throughputs_version'] = self._cat._roman_thru_v
         file_metadata = assemble_file_metadata(
             self._catalog_creator._pkg_root,
             run_options=self._catalog_creator._run_options,
             flux_file=True,
             throughputs_versions=thru_v)
 
-        arrow_schema = self._create_flux_schema(metadata_input=file_metadata)
+        arrow_schema = make_star_flux_schema(self._logger.name,
+                                             include_roman_flux=self._include_roman_flux,
+                                             metadata_input=file_metadata)
 
         self._logger.info('Creating trilegal flux files')
 
