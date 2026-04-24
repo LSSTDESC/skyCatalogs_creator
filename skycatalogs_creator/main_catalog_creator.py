@@ -20,6 +20,7 @@ from .utils.creator_utils import make_MW_extinction_av, make_MW_extinction_rv
 from skycatalogs.objects.star_object import StarConfigFragment
 from skycatalogs.objects.galaxy_object import GalaxyConfigFragment
 from skycatalogs.objects.diffsky_object import DiffskyConfigFragment
+from skycatalogs.objects.base_object import load_lsst_bandpasses
 from .sso_catalog_creator import SsoMainCatalogCreator
 from .trilegal_catalog_creator import TrilegalMainCatalogCreator
 
@@ -291,10 +292,12 @@ class MainCatalogCreator:
              removing magnitude columns read from truth
         '''
 
-        # Temporarily, for debugging infrastructure, just copy magnitudes to
-        # fluxes.  The values won't make any sense
-        for bp in 'ugrizy':
-            dat[f'lsst_rough_flux_{bp}'] = dat[f'mag_{bp}_lsst']
+        bps = load_lsst_bandpasses()
+        for band in 'ugrizy':
+            zp = bps[band].zeropoint
+            mag = dat[f'mag_{band}_lsst']
+            rough_flux = 10**((zp-mag)/2.5)
+            dat[f'lsst_rough_flux_{band}'] = rough_flux
 
     def create(self):
         """
