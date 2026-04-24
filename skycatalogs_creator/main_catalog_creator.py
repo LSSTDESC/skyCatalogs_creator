@@ -151,8 +151,8 @@ class MainCatalogCreator:
                  catalog_dir='.', truth=None,
                  config_path=None, catalog_name='skyCatalog',
                  mag_cut=None,
-                 knots_mag_cut=27.0,
-                 knots=True, logname='skyCatalogs.creator',
+                 knots_mag_cut=27.0, knots=True, rough_flux=False,
+                 logname='skyCatalogs.creator',
                  pkg_root=None, skip_done=False,
                  nside=32, stride=1000000, dc2=False,
                  star_input_fmt='sqlite', sso_sed=None,
@@ -183,6 +183,7 @@ class MainCatalogCreator:
         mag_cut         If not None, exclude galaxies with mag_r > mag_cut
         knots_mag_cut   No knots for galaxies with i_mag > cut
         knots           If True include knots
+        rough_flux      If True include quick & dirty flux columns
         logname         logname for Python logger
         pkg_root        defaults to one level up from __file__
         skip_done       If True, skip over files which already exist. Otherwise
@@ -230,6 +231,7 @@ class MainCatalogCreator:
         self._mag_cut = mag_cut
         self._knots_mag_cut = knots_mag_cut
         self._knots = knots
+        self._rough_flux = rough_flux
         self._logname = logname
         self._logger = logging.getLogger(logname)
         self._skip_done = skip_done
@@ -273,6 +275,27 @@ class MainCatalogCreator:
             del dat[k]
         return dat
 
+    def _make_rough_flux(self, dat):
+        '''
+        Parameters
+        ----------
+        dat: dict    values from input truth, partially modified for output
+
+        Returns
+        -------
+        Return  modified dict with columns for rough fluxes.
+        Could also delete magnitude columns but not required;
+        they won't be written to output in any case.
+
+
+             removing magnitude columns read from truth
+        '''
+
+        # Temporarily, for debugging infrastructure, just copy magnitudes to
+        # fluxes.  The values won't make any sense
+        for bp in 'ugrizy':
+            dat[f'lsst_rough_flux_{bp}'] = dat[f'mag_{bp}_lsst']
+
     def create(self):
         """
         Create catalog of specified type, using stored context.
@@ -283,7 +306,7 @@ class MainCatalogCreator:
         None
         """
         object_type = self._object_type
-        if object_type in {'cosmodc2_galaxy', 'diffsky_galaxy'}:
+        if object_type in {'cosmodc2_galaxy', 'diffsky_galaxy', 'skysim5000'}:
             self.create_galaxy_catalog()
         elif object_type == ('star'):
             self.create_pointsource_catalog()
@@ -307,6 +330,7 @@ class MainCatalogCreator:
         """
         _cosmo_cat = 'cosmodc2_v1.1.4_image_addon_knots'
         _diffsky_cat = 'roman_rubin_2023_v1.1.2_elais'
+        _skysim5000_cat = 'skysim5000_v1.2'
 
         import GCRCatalogs
 
@@ -314,6 +338,10 @@ class MainCatalogCreator:
             self._galaxy_type = 'cosmodc2'
             if self._truth is None:
                 self._truth = _cosmo_cat
+        elif self._object_type == 'skysim5000':
+            self._galaxy_type = 'skysim5000'
+            if self._truth is None:
+                self._truth = _skysim5000_cat
         else:    # only other possibility is diffsky
             self._galaxy_type = 'diffsky'
             if self._truth is None:
@@ -351,6 +379,7 @@ class MainCatalogCreator:
 
         arrow_schema = make_galaxy_schema(self._logname,
                                           knots=self._knots,
+                                          rough_flux=self._rough_flux,
                                           galaxy_type=self._galaxy_type,
                                           metadata_input=file_metadata)
 
@@ -367,6 +396,10 @@ class MainCatalogCreator:
         cosmo = assemble_cosmology(self._cosmology)
         if self._galaxy_type == 'diffsky':
             fragment = DiffskyConfigFragment(prov, cosmo)
+            self._config_writer.write_configs(fragment)
+        elif self._galaxy_type == 'skysim5000':
+            fragment = GalaxyConfigFragment(prov, cosmo, self._tophat_sed_bins,
+                                            skysim=True)
             self._config_writer.write_configs(fragment)
         else:
             fragment = GalaxyConfigFragment(prov, cosmo, self._tophat_sed_bins)
@@ -437,8 +470,9 @@ class MainCatalogCreator:
             out_pixels = [pixel]
         self._out_pixels = out_pixels
         skip_count = 0
+        prefix = 'skysim5000' if self._galaxy_type == 'skysim5000' else 'galaxy'
         for p in out_pixels:
-            output_path = os.path.join(self._output_dir, f'galaxy_{p}.parquet')
+            output_path = os.path.join(self._output_dir, f'{prefix}_{p}.parquet')
             if os.path.exists(output_path):
                 if self._skip_done:
                     self._logger.info(f'Skipping regeneration of {output_path}')
@@ -455,7 +489,7 @@ class MainCatalogCreator:
             r_mag_name = 'mag_r_lsst'
             mag_cut_filter = [f'{r_mag_name} < {self._mag_cut}']
 
-        if self._galaxy_type == 'cosmodc2':
+        if self._galaxy_type in ('cosmodc2', 'skysim5000'):
 
             # to_fetch = all columns of interest in gal_cat
             non_sed = ['galaxy_id', 'ra', 'dec', 'redshift', 'redshiftHubble',
@@ -476,6 +510,9 @@ class MainCatalogCreator:
 
             if self._knots:
                 non_sed += ['knots_flux_ratio', 'n_knots', 'mag_i_lsst']
+
+            if self._rough_flux:
+                non_sed += [f'mag_{band}_lsst' for band in 'ugrizy']
 
             # Find sed bin definition and all the tophat quantities needed
             all_q = gal_cat.list_all_quantities()
@@ -511,7 +548,7 @@ class MainCatalogCreator:
         # For cosmodc2 input some columns need to be renamed and there is
         # special handling for knots
         to_rename = dict()
-        if self._galaxy_type == 'cosmodc2':
+        if self._galaxy_type in ('cosmodc2', 'skysim5000'):
             to_rename = {'redshiftHubble': 'redshift_hubble',
                          'peculiarVelocity': 'peculiar_velocity'}
             if self._dc2:
@@ -533,6 +570,8 @@ class MainCatalogCreator:
                     df[d_name] = np.where(np.array(df['mag_i_lsst']) > self._knots_mag_cut, 1,
                                           np.clip(1 - df['knots_flux_ratio'],
                                                   eps, None)) * df[d_name]
+            if self._rough_flux:
+                self._make_rough_flux(df)     # Needs work
 
         if len(self._out_pixels) > 1:
             subpixel_masks = _generate_subpixel_masks(df['ra'], df['dec'],
@@ -542,7 +581,12 @@ class MainCatalogCreator:
             subpixel_masks = {pixel: None}
 
         for p, val in subpixel_masks.items():
-            output_path = os.path.join(self._output_dir, f'galaxy_{p}.parquet')
+            if self._galaxy_type == 'skysim5000':
+                prefix = 'skysim5000'
+            else:
+                prefix = 'galaxy'
+            output_path = os.path.join(self._output_dir,
+                                       f'{prefix}_{p}.parquet')
             if os.path.exists(output_path):
                 if not self._skip_done:
                     os.remove(output_path)
@@ -555,7 +599,7 @@ class MainCatalogCreator:
                 for k in df:
                     compressed[k] = ma.array(df[k], mask=val).compressed()
 
-                if self._galaxy_type == 'cosmodc2':
+                if self._galaxy_type in ('cosmodc2', 'skysim5000'):
                     compressed = self._make_tophat_columns(compressed,
                                                            sed_disk_names,
                                                            'disk')
@@ -571,7 +615,7 @@ class MainCatalogCreator:
                                      arrow_schema=arrow_schema,
                                      stride=stride, to_rename=to_rename)
             else:
-                if self._galaxy_type == 'cosmodc2':
+                if self._galaxy_type in ('cosmodc2', 'skysim5000'):
                     df = self._make_tophat_columns(df, sed_disk_names, 'disk')
                     df = self._make_tophat_columns(df, sed_bulge_names, 'bulge')
                     if self._knots:
