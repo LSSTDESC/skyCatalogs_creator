@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('object_type',
                     choices=['star', 'cosmodc2_galaxy', 'diffsky_galaxy',
-                             'sso', 'trilegal'],
+                             'skysim5000', 'sso', 'trilegal'],
                     help='Object type for which catalog is to be created')
 parser.add_argument('--pixels', type=int, nargs='*', default=[9556],
                     help='healpix pixels for which catalogs will be created')
@@ -42,6 +42,9 @@ parser.add_argument('--knots-magnitude-cut', default=27.0, type=float,
 parser.add_argument('--no-knots', action='store_true',
                     help='''If supplied omit knots component. Default is False.
                             Ignored for non-galaxy object types''')
+parser.add_argument('--rough-flux', action='store_true',
+                    help='''If supplied generate rough fluxes from truth
+                            magnitudes''')
 
 parser.add_argument('--config-path', default=None, help='''
                     Output path for config file. If no value,
@@ -117,7 +120,9 @@ creator = MainCatalogCreator(args.object_type, parts,
                              catalog_name=args.catalog_name,
                              mag_cut=args.galaxy_magnitude_cut,
                              knots_mag_cut=args.knots_magnitude_cut,
-                             knots=(not args.no_knots), logname=logname,
+                             knots=(not args.no_knots),
+                             rough_flux=(args.rough_flux),
+                             logname=logname,
                              skip_done=args.skip_done,
                              nside=args.nside,
                              stride=args.stride,
