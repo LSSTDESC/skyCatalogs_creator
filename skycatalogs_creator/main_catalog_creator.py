@@ -21,6 +21,7 @@ from skycatalogs.objects.star_object import StarConfigFragment
 from skycatalogs.objects.galaxy_object import GalaxyConfigFragment
 from skycatalogs.objects.diffsky_object import DiffskyConfigFragment
 from skycatalogs.objects.base_object import load_lsst_bandpasses
+from skycatalogs.objects.base_object import load_lsst_bandpasses_version
 from .sso_catalog_creator import SsoMainCatalogCreator
 from .trilegal_catalog_creator import TrilegalMainCatalogCreator
 
@@ -233,6 +234,10 @@ class MainCatalogCreator:
         self._knots_mag_cut = knots_mag_cut
         self._knots = knots
         self._rough_flux = rough_flux
+        if rough_flux:
+            self._lsst_bandpasses_version = load_lsst_bandpasses_version()
+        else:
+            self._lsst_bandpasses_version = None
         self._logname = logname
         self._logger = logging.getLogger(logname)
         self._skip_done = skip_done
@@ -376,6 +381,8 @@ class MainCatalogCreator:
         self._cosmology = gal_cat.cosmology
 
         inputs = {'galaxy_truth': self._truth}
+        if self._lsst_bandpasses_version:
+            inputs['lsst_bandpasses_version'] = self._lsst_bandpasses_version
         file_metadata = assemble_file_metadata(self._pkg_root,
                                                inputs=inputs,
                                                run_options=self._run_options)
@@ -394,7 +401,7 @@ class MainCatalogCreator:
         # Now make config.   We need it for computing LSST fluxes for
         # the second part of the galaxy catalog
         prov = assemble_provenance(self._pkg_root,
-                                   inputs={'galaxy_truth': self._truth},
+                                   inputs=inputs,
                                    run_options=self._run_options)
         cosmo = assemble_cosmology(self._cosmology)
         if self._galaxy_type == 'diffsky':
@@ -402,7 +409,7 @@ class MainCatalogCreator:
             self._config_writer.write_configs(fragment)
         elif self._galaxy_type == 'skysim5000':
             fragment = GalaxyConfigFragment(prov, cosmo, self._tophat_sed_bins,
-                                            skysim=True)
+                                            skysim=True,)
             self._config_writer.write_configs(fragment)
         else:
             fragment = GalaxyConfigFragment(prov, cosmo, self._tophat_sed_bins)
