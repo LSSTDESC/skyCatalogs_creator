@@ -581,7 +581,7 @@ class MainCatalogCreator:
                                           np.clip(1 - df['knots_flux_ratio'],
                                                   eps, None)) * df[d_name]
             if self._rough_flux:
-                self._make_rough_flux(df)     # Needs work
+                self._make_rough_flux(df)
 
         if len(self._out_pixels) > 1:
             subpixel_masks = _generate_subpixel_masks(df['ra'], df['dec'],
