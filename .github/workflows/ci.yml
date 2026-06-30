@@ -139,7 +139,7 @@ jobs:
 
             - name: Install skyCatalogs
               run: |
-                pip install --no-build-isolation --no-deps git+https://github.com/LSSTDESC/skyCatalogs@v2.4.0
+                pip install --no-build-isolation --no-deps git+https://github.com/LSSTDESC/skyCatalogs@v2.5.0
 
             - name: Install skyCatalogs_creator
               run: |
