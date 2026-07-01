@@ -11,6 +11,7 @@ from .utils.parquet_schema_utils import make_galaxy_flux_schema
 from .utils.parquet_schema_utils import make_star_flux_schema
 from skycatalogs.objects.base_object import LSST_BANDS
 from skycatalogs.objects.base_object import ROMAN_BANDS
+from skycatalogs.objects.base_object import load_lsst_bandpasses_version
 from .sso_catalog_creator import SsoFluxCatalogCreator
 from .trilegal_catalog_creator import TrilegalFluxCatalogCreator
 
@@ -81,8 +82,8 @@ class FluxCatalogCreator:
 
         Parameters
         ----------
-        object_type     'cosmodc2_galaxy', 'diffsky_galaxy', 'star', 'sso'
-                        or 'trilegal'
+        object_type     'cosmodc2_galaxy', 'skysim5000', 'diffsky_galaxy',
+                        'star', 'sso' or 'trilegal'
         parts           Segments for which catalog is to be generated. If
                         partition type is HEALpix, parts will be a collection
                         of HEALpix pixels
@@ -117,6 +118,8 @@ class FluxCatalogCreator:
         self._object_type = object_type
         if object_type.endswith('_galaxy'):
             self._galaxy_type = object_type[:-7]  # len('_galaxy')
+        elif object_type == 'skysim5000':
+            self._galaxy_type = object_type
 
         if pkg_root:
             self._pkg_root = pkg_root
@@ -171,7 +174,7 @@ class FluxCatalogCreator:
         None
         """
         object_type = self._object_type
-        if object_type in {'cosmodc2_galaxy', 'diffsky_galaxy'}:
+        if object_type in {'cosmodc2_galaxy', 'diffsky_galaxy', 'skysim5000'}:
             self.create_galaxy_flux_catalog()
         elif object_type == ('star'):
             self.create_pointsource_flux_catalog()
@@ -200,7 +203,7 @@ class FluxCatalogCreator:
         '''
 
         # Throughput versions for fluxes included
-        thru_v = {'lsst_throughputs_version': self._cat._lsst_thru_v}
+        thru_v = {'lsst_throughputs_version': load_lsst_bandpasses_version()}
         if self._include_roman_flux:
             thru_v['roman_throughputs_version'] = self._cat._roman_thru_v
 
@@ -218,6 +221,8 @@ class FluxCatalogCreator:
 
         if self._galaxy_type == 'diffsky':
             type_field = 'diffsky_galaxy'
+        elif self._galaxy_type == 'skysim5000':
+            type_field = self._galaxy_type
         else:
             type_field = 'galaxy'
         self._flux_template = self._cat.raw_config['object_types'][type_field]['flux_file_template']
@@ -253,7 +258,10 @@ class FluxCatalogCreator:
 
         # Would be better to obtain output filename from config or
         # at least from object_type
-        output_filename = f'galaxy_flux_{pixel}.parquet'
+        if self._galaxy_type == 'skysim5000':
+            output_filename = f'{self._galaxy_type}_flux_{pixel}.parquet'
+        else:
+            output_filename = f'galaxy_flux_{pixel}.parquet'
         output_path = os.path.join(self._output_dir, output_filename)
 
         if os.path.exists(output_path):
@@ -384,7 +392,7 @@ class FluxCatalogCreator:
         ------
         None
         '''
-        thru_v = {'lsst_throughputs_version': self._cat._lsst_thru_v}
+        thru_v = {'lsst_throughputs_version': load_lsst_bandpasses_version()}
         file_metadata = assemble_file_metadata(
             self._pkg_root,
             run_options=self._run_options,
