@@ -17,6 +17,7 @@ from .utils.star_parquet_input import _star_parquet_reader
 from .utils.parquet_schema_utils import make_galaxy_schema
 from .utils.parquet_schema_utils import make_star_schema
 from .utils.creator_utils import make_MW_extinction_av, make_MW_extinction_rv
+from .utils.diffsky_utils import materialize_diffsky_columns
 from skycatalogs.objects.star_object import StarConfigFragment
 from skycatalogs.objects.galaxy_object import GalaxyConfigFragment
 from skycatalogs.objects.diffsky_object import DiffskyConfigFragment
@@ -306,39 +307,41 @@ class MainCatalogCreator:
 
         """
         _cosmo_cat = 'cosmodc2_v1.1.4_image_addon_knots'
-        _diffsky_cat = 'roman_rubin_2023_v1.1.2_elais'
-
-        import GCRCatalogs
-
         if self._object_type == 'cosmodc2_galaxy':
+            import GCRCatalogs
+
             self._galaxy_type = 'cosmodc2'
             if self._truth is None:
                 self._truth = _cosmo_cat
-        else:    # only other possibility is diffsky
-            self._galaxy_type = 'diffsky'
-            if self._truth is None:
-                self._truth = _diffsky_cat
-        if self._truth != 'GCR_CI':
-            gal_cat = GCRCatalogs.load_catalog(self._truth)
-        else:
-            # Special handling for CI.  The config file is not
-            # part of the normal GCRCatalogs collection and the
-            # root dir where the data are stored is also non-standard
-            if self._galaxy_type == 'cosmodc2':
+            if self._truth != 'GCR_CI':
+                gal_cat = GCRCatalogs.load_catalog(self._truth)
+            else:
+                # Special handling for CI. The config file is not part of the
+                # normal GCRCatalogs collection and its root is non-standard.
                 GCRCatalogs.ConfigSource.set_config_source(dr=False)
                 ci_gcr = os.getenv('CI_GCR')
                 gcr_root = os.path.join(ci_gcr, 'gcr_root_dir')
                 GCRCatalogs.set_root_dir(gcr_root)
                 config_path = os.path.join(ci_gcr, 'gcr_catalog_configs',
                                            'cosmodc2_galaxy_mini.yaml')
-                config_dict = GCRCatalogs.catalog_helpers.load_yaml_local(config_path)
+                config_dict = GCRCatalogs.catalog_helpers.load_yaml_local(
+                    config_path)
                 # Since the config file doesn't get read in at the usual
                 # time we have to do resolution of root dir by hand.
                 config_register = GCRCatalogs.ConfigSource.get_config_source()
                 resolved = config_register.resolve_root_dir(config_dict)
                 gal_cat = GCRCatalogs.load_catalog_from_config_dict(resolved)
-            else:
-                raise NotImplementedError(f'No CI for {self._galaxy_type} galaxies')
+        else:
+            self._galaxy_type = 'diffsky'
+            if self._truth is None:
+                raise ValueError(
+                    'Diffsky input must be the path to an OpenCosmo catalog '
+                    'directory.')
+            from diffsky.data_loaders.opencosmo_utils import load_diffsky_mock
+
+            # load_diffsky_mock passes keep_top_host=True to oc.open, which is
+            # required by OpenCosmo 1.3 for these catalogs.
+            gal_cat, self._diffsky_aux_data = load_diffsky_mock(self._truth)
         self._gal_cat = gal_cat
 
         # Save cosmology in case we need to write parameters out later
@@ -366,7 +369,11 @@ class MainCatalogCreator:
                                    run_options=self._run_options)
         cosmo = assemble_cosmology(self._cosmology)
         if self._galaxy_type == 'diffsky':
-            fragment = DiffskyConfigFragment(prov, cosmo)
+            area_partition = {
+                'type': 'healpix', 'ordering': 'ring', 'nside': self._nside,
+            }
+            fragment = DiffskyConfigFragment(
+                prov, cosmo, area_partition=area_partition)
             self._config_writer.write_configs(fragment)
         else:
             fragment = GalaxyConfigFragment(prov, cosmo, self._tophat_sed_bins)
@@ -399,7 +406,8 @@ class MainCatalogCreator:
         writer = None
 
         while u_bnd > l_bnd:
-            out_dict = {k: dat[k][l_bnd: u_bnd] for k in dat if k not in to_rename}
+            out_dict = {k: dat[k][l_bnd: u_bnd]
+                        for k in dat if k not in to_rename}
             for k in to_rename:
                 out_dict[to_rename[k]] = dat[k][l_bnd: u_bnd]
             out_df = pd.DataFrame.from_dict(out_dict)
@@ -413,7 +421,8 @@ class MainCatalogCreator:
             u_bnd = min(l_bnd + stride, last_row_ix + 1)
 
         writer.close()
-        self._logger.debug(f'# row groups written to {output_path}: {rg_written}')
+        self._logger.debug(
+            f'# row groups written to {output_path}: {rg_written}')
 
     def create_galaxy_pixel(self, pixel, gal_cat, arrow_schema):
         """
@@ -441,7 +450,8 @@ class MainCatalogCreator:
             output_path = os.path.join(self._output_dir, f'galaxy_{p}.parquet')
             if os.path.exists(output_path):
                 if self._skip_done:
-                    self._logger.info(f'Skipping regeneration of {output_path}')
+                    self._logger.info(
+                        f'Skipping regeneration of {output_path}')
                     skip_count = skip_count + 1
 
         if skip_count == len(out_pixels):
@@ -489,15 +499,42 @@ class MainCatalogCreator:
             to_fetch = non_sed + sed_bulge_names + sed_disk_names
 
         elif self._galaxy_type == 'diffsky':
-            to_fetch = ['galaxy_id', 'ra', 'dec', 'redshift', 'redshiftHubble',
-                        'peculiarVelocity', 'shear1', 'shear2',
-                        'convergence', 'diskEllipticity1', 'diskEllipticity2',
-                        'spheroidEllipticity1', 'spheroidEllipticity2',
-                        'spheroidHalfLightRadiusArcsec',
-                        'diskHalfLightRadiusArcsec', 'um_source_galaxy_obs_sm']
+            to_fetch = ['gal_id', 'ra', 'ra_obs', 'dec', 'dec_obs',
+                        'redshift_true', 'vpec',
+                        'shear1', 'shear2', 'kappa',
+                        'ellipticity_bulge', 'ellipticity_disk',
+                        'psi_bulge', 'psi_disk',
+                        'r50_bulge_2d', 'r50_disk_2d',
+                        'logsm_obs']
 
         # df is not a dataframe!  It's just a dict
-        if not self._mag_cut:
+        if self._galaxy_type == 'diffsky':
+            # OpenCosmo partitions on the intrinsic coordinates. Include the
+            # neighboring input pixels so galaxies lensed across a boundary
+            # are placed in the correct observed-coordinate output pixel.
+            input_ring_pixels = np.append(
+                pixel, healpy.get_all_neighbours(32, pixel, nest=False))
+            input_ring_pixels = np.unique(
+                input_ring_pixels[input_ring_pixels >= 0])
+            input_nest_pixels = healpy.ring2nest(32, input_ring_pixels)
+            selected = gal_cat.pixel_search(input_nest_pixels, nside=32)
+            if self._mag_cut:
+                to_fetch.append('lsst_r')
+            df = selected.select(to_fetch).get_data(format='numpy',
+                                                     wrap_single=True)
+            # keep_top_host=True may retain central galaxies outside the
+            # requested region for downstream Diffsky calculations. The main
+            # SkyCatalog file must contain only members of its ring pixel.
+            in_pixel = (healpy.ang2pix(
+                32, df['ra_obs'], df['dec_obs'], lonlat=True) == pixel)
+            df = {name: np.asarray(values)[in_pixel]
+                  for name, values in df.items()}
+            if self._mag_cut:
+                keep = np.asarray(df.pop('lsst_r')) < self._mag_cut
+                df = {name: np.asarray(values)[keep]
+                      for name, values in df.items()}
+            df = materialize_diffsky_columns(df, self._cosmology)
+        elif not self._mag_cut:
             df = gal_cat.get_quantities(to_fetch, native_filters=hp_filter)
         else:
             df = gal_cat.get_quantities(to_fetch + [r_mag_name],
@@ -522,10 +559,13 @@ class MainCatalogCreator:
 
             if self._knots:
                 # adjust disk sed; create knots sed
-                sed_knot_names = [i.replace('disk', 'knots') for i in sed_disk_names]
+                sed_knot_names = [i.replace('disk', 'knots')
+                                  for i in sed_disk_names]
                 eps = np.finfo(np.float32).eps
-                mag_mask = np.where(np.array(df['mag_i_lsst']) > self._knots_mag_cut, 0, 1)
-                self._logger.debug(f'Count of mags <=  cut (so adjustment performed: {np.count_nonzero(mag_mask)}')
+                mag_mask = np.where(
+                    np.array(df['mag_i_lsst']) > self._knots_mag_cut, 0, 1)
+                self._logger.debug(
+                    f'Count of mags <=  cut (so adjustment performed: {np.count_nonzero(mag_mask)}')
 
                 for d_name, k_name in zip(sed_disk_names, sed_knot_names):
                     df[k_name] = mag_mask * np.clip(df['knots_flux_ratio'],
@@ -573,7 +613,8 @@ class MainCatalogCreator:
             else:
                 if self._galaxy_type == 'cosmodc2':
                     df = self._make_tophat_columns(df, sed_disk_names, 'disk')
-                    df = self._make_tophat_columns(df, sed_bulge_names, 'bulge')
+                    df = self._make_tophat_columns(
+                        df, sed_bulge_names, 'bulge')
                     if self._knots:
                         df = self._make_tophat_columns(df, sed_knot_names,
                                                        'knots')
@@ -582,7 +623,6 @@ class MainCatalogCreator:
                                      stride=stride, to_rename=to_rename)
 
     def create_pointsource_catalog(self):
-
         """
         Parameters
         ----------

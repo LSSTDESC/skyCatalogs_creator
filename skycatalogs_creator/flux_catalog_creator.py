@@ -43,16 +43,39 @@ def _do_flux_chunk(send_conn, object_collection, instrument_needed,
 
     o_list = object_collection[l_bnd: u_bnd]
     out_dict[id_column] = [o.get_native_attribute(id_column) for o in o_list]
+
+    if o_list and hasattr(o_list[0], 'prefetch_seds'):
+        prefetch_size = o_list[0].sed_prefetch_batch_size
+        object_batches = [o_list[start:start + prefetch_size]
+                          for start in range(0, len(o_list), prefetch_size)]
+    else:
+        object_batches = [o_list]
+
     if 'lsst' in instrument_needed:
-        all_fluxes = [o.get_LSST_fluxes(as_dict=False) for o in o_list]
+        all_fluxes = []
+        roman_fluxes = []
+        for batch in object_batches:
+            if batch and hasattr(batch[0], 'prefetch_seds'):
+                batch[0].prefetch_seds(batch)
+            all_fluxes.extend(
+                o.get_LSST_fluxes(as_dict=False) for o in batch)
+            if 'roman' in instrument_needed:
+                roman_fluxes.extend(
+                    o.get_roman_fluxes(as_dict=False) for o in batch)
         all_fluxes_transpose = zip(*all_fluxes)
         colnames = [f'lsst_flux_{band}' for band in LSST_BANDS]
         flux_dict = dict(zip(colnames, all_fluxes_transpose))
         out_dict.update(flux_dict)
 
     if 'roman' in instrument_needed:
-        all_fluxes = [o.get_roman_fluxes(as_dict=False) for o in o_list]
-        all_fluxes_transpose = zip(*all_fluxes)
+        if 'lsst' not in instrument_needed:
+            roman_fluxes = []
+            for batch in object_batches:
+                if batch and hasattr(batch[0], 'prefetch_seds'):
+                    batch[0].prefetch_seds(batch)
+                roman_fluxes.extend(
+                    o.get_roman_fluxes(as_dict=False) for o in batch)
+        all_fluxes_transpose = zip(*roman_fluxes)
         colnames = [f'roman_flux_{band}' for band in ROMAN_BANDS]
         flux_dict = dict(zip(colnames, all_fluxes_transpose))
         out_dict.update(flux_dict)
@@ -141,11 +164,21 @@ class FluxCatalogCreator:
 
         self._cat = open_catalog(self.get_config_file_path(),
                                  skycatalog_root=self._skycatalog_root)
+        if self._object_type == 'diffsky_galaxy':
+            diffsky_config = self._cat.raw_config['object_types'][
+                'diffsky_galaxy']
+            try:
+                self._galaxy_truth = diffsky_config[
+                    'provenance']['inputs']['galaxy_truth']
+            except KeyError as exc:
+                raise ValueError(
+                    'Diffsky config provenance must contain the OpenCosmo '
+                    'input path at inputs.galaxy_truth') from exc
 
         # if we're not skipping existing files (that is, we're overwriting)
         # and the catalogs are partitioned by healpixel, tell skyCatalogs
         # to ignore existing flux files for the healpixels we process
-        if self._object_type.endswith('galaxy'):
+        if self._object_type == 'cosmodc2_galaxy':
             self._cat.ignore_files('galaxy', self._parts)
         else:
             self._cat.ignore_files(self._object_type, self._parts)
@@ -160,7 +193,6 @@ class FluxCatalogCreator:
         self._trilegal_creator = TrilegalFluxCatalogCreator(self, include_roman_flux=self._include_roman_flux)
         self._run_options = run_options
         self._tophat_sed_bins = None
-        self._sed_gen = None
 
     def create(self):
         """
@@ -231,7 +263,8 @@ class FluxCatalogCreator:
     def _get_needed_flux_attrs(self):
         if self._galaxy_type == 'diffsky':
             return ['galaxy_id', 'shear1', 'shear2', 'convergence',
-                    'redshiftHubble', 'MW_av', 'MW_rv']
+                    'redshiftHubble', 'ra_true', 'dec_true',
+                    'MW_av', 'MW_rv']
         else:
             return ['galaxy_id', 'shear_1', 'shear_2', 'convergence',
                     'redshift_hubble', 'MW_av', 'MW_rv', 'sed_val_bulge',
@@ -270,25 +303,6 @@ class FluxCatalogCreator:
             self._logger.warning(f'Cannot create flux file for pixel {pixel} because main file does not exist or is empty')
             return
 
-        if self._galaxy_type == 'diffsky':
-            # Generate SEDs if necessary
-            sed_output_path = os.path.join(self._output_dir,
-                                           f'galaxy_sed_{pixel}.hdf5')
-            if not os.path.exists(sed_output_path):
-                if not self._sed_gen:
-                    from skycatalogs.diffsky_sedgen import DiffskySedGenerator
-                    # Default values are ok for all the diffsky-specific
-                    # parameters: include_nonLSST_flux, sed_parallel, auto_loop,
-                    # wave_ang_min, wave_ang_max, rel_err, n_per
-                    self._sed_gen = DiffskySedGenerator(
-                        logname=self._logname,
-                        galaxy_truth=self._galaxy_truth,
-                        output_dir=self._output_dir,
-                        skip_done=True,
-                        sky_cat=self._cat)
-
-                self._sed_gen.generate_pixel(pixel)
-
         writer = None
         _instrument_needed = []
         rg_written = 0
@@ -325,7 +339,8 @@ class FluxCatalogCreator:
             if n_parallel == 1:
                 # For debugging call directly
                 out_dict = _do_flux_chunk(None, _galaxy_collection,
-                                          _instrument_needed, lb, u, 'galaxy_id')
+                                          _instrument_needed, lb, u,
+                                          'galaxy_id')
             else:
                 # Expect to be able to do about 1500/minute/process
                 tm = max(int((n_per*60)/500), 5)  # Give ourselves a cushion
@@ -338,7 +353,8 @@ class FluxCatalogCreator:
                     proc = Process(target=_do_flux_chunk,
                                    name=f'proc_{i}',
                                    args=(conn_wrt, _galaxy_collection,
-                                         _instrument_needed, lb, u, 'galaxy_id'))
+                                         _instrument_needed, lb, u,
+                                         'galaxy_id'))
                     proc.start()
                     p_list.append(proc)
                     lb = u

@@ -82,6 +82,8 @@ def make_galaxy_schema(logname, knots=True,
                   # metadata={"units" : "radians"}),
                   pa.field('dec', pa.float64(), True),
                   # metadata={"units" : "radians"}),
+                  pa.field('ra_true', pa.float64(), True),
+                  pa.field('dec_true', pa.float64(), True),
                   pa.field('redshift', pa.float64(), True),
                   pa.field('redshiftHubble', pa.float64(), True),
                   pa.field('peculiarVelocity', pa.float64(), True),
@@ -124,7 +126,6 @@ def make_galaxy_flux_schema(logname, galaxy_type='cosmodc2',
     logger = logging.getLogger(logname)
     logger.debug('Creating galaxy flux schema')
     fields = [pa.field('galaxy_id', pa.int64()),
-              # should flux fields be named e.g. lsst_cmodel_flux_u?
               pa.field('lsst_flux_u', pa.float32(), True),
               pa.field('lsst_flux_g', pa.float32(), True),
               pa.field('lsst_flux_r', pa.float32(), True),

@@ -169,3 +169,40 @@ so use something higher to make the process go faster.
 .. note::
    The star main files for both healpixels must already exist in the output
    directory since they are input to the flux generation.
+
+
+Diffsky OpenCosmo input
+-----------------------
+
+For ``diffsky_galaxy``, ``--truth`` is the path to the directory containing
+the current Diffsky OpenCosmo catalog and its auxiliary data.  For
+example::
+
+    create_main.py diffsky_galaxy --truth /path/to/diffsky_mock --pixels 9556
+
+The Diffsky loader opens the catalog with ``keep_top_host=True``, as required
+by OpenCosmo 1.3.  Extra host rows retained for Diffsky calculations are not
+written to the requested SkyCatalog HEALPix partition.
+
+The creator preserves the established SkyCatalog column names.  It converts the 
+following:
+``gal_id`` to ``galaxy_id``, 
+``redshift_true`` to ``redshiftHubble``, 
+``vpec``to ``peculiarVelocity``, and 
+``kappa`` to ``convergence``. 
+Native ``ra_obs``/``dec_obs`` become ``ra``/``dec``, while the intrinsic 
+coordinates are retained as ``ra_true``/``dec_true``. It also writes the observed
+``redshift``, component ellipticity pairs, and angular half-light radii as
+precomputed columns. Native ``r50_bulge_2d`` and ``r50_disk_2d`` are currently
+assumed to be proper physical kpc and to map one-to-one to half-light-radius.
+
+Full component SED arrays are not written by the creator. SkyCatalogs uses
+the input directory recorded in provenance to compute SEDs lazily in
+OpenCosmo host-safe batches. Bulk callers prefetch only their requested galaxy
+IDs, grouped by intrinsic HEALPix pixel, so sparse selections do not compute
+SEDs for irrelevant neighboring source rows. Flux parquet files are still
+produced normally with the established LSST and optional Roman columns.
+
+A complete local and Slurm-oriented Diffsky batch workflow is provided in
+``examples/diffsky_batch``. It includes observed-pixel discovery, grouped main
+catalog creation and sharded flux creation.
