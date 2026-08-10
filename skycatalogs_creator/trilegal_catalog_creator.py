@@ -10,7 +10,6 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import numpy as np
 import json
-import galsim
 from skycatalogs.objects.base_object import LSST_BANDS, load_lsst_bandpasses
 from skycatalogs.objects.base_object import load_roman_bandpasses
 from skycatalogs.objects.trilegal_object import TrilegalConfigFragment
@@ -227,7 +226,6 @@ def _do_trilegal_flux_chunk(send_conn, collection, instrument_needed,
     returns
                     dict with keys id, lsst_flux_u, ... lsst_flux_y
     '''
-    global tri_lsst_bandpasses
     out_dict = {}
     if debug:
         now = datetime.now().isoformat()[:19]
@@ -243,7 +241,7 @@ def _do_trilegal_flux_chunk(send_conn, collection, instrument_needed,
             return out_dict
 
     skycat = collection._sky_catalog
-    factory = skycat._trilegal_sed_factory
+    factory = skycat._sed_factory['trilegal']
     extinguisher = skycat._extinguisher
 
     pq_main = pq.ParquetFile(main_path)
@@ -254,7 +252,6 @@ def _do_trilegal_flux_chunk(send_conn, collection, instrument_needed,
         print(f'{now} Spectra computed', flush=True)
     av = collection.get_native_attribute('av')
     id = collection.get_native_attribute('id')
-    imag = collection.get_native_attribute('imag')
     out_dict['id'] = id[l_bnd: u_bnd]
 
     # Compute LSST fluxes

@@ -29,10 +29,10 @@ def _add_roman_fluxes(fields, include_all_bands=False):
 # This schema is not the same as the one taken from the data,
 # probably because of the indexing in the schema derived from a pandas df.
 def make_galaxy_schema(logname, knots=True,
-                       galaxy_type='cosmodc2', metadata_input=None,
-                       metadata_key='provenance'):
+                       galaxy_type='cosmodc2', rough_flux=False,
+                       metadata_input=None, metadata_key='provenance'):
     logger = logging.getLogger(logname)  # maybe move this above if:
-    if galaxy_type == 'cosmodc2':
+    if galaxy_type in  ('cosmodc2', 'skysim5000'):
         fields = [pa.field('galaxy_id', pa.int64()),
                   pa.field('ra', pa.float64(), True),
                   # Consider adding metadata for units, e.g.
@@ -75,6 +75,15 @@ def make_galaxy_schema(logname, knots=True,
             # galaxy-wide quantities.
             fields.append(pa.field('n_knots', pa.float32(), True))
             fields.append(pa.field('knots_magnorm', pa.float64(), True))
+        if rough_flux:
+            logger.debug("rough flux requested")
+            fields.append(pa.field('lsst_rough_flux_u', pa.float32(), True))
+            fields.append(pa.field('lsst_rough_flux_g', pa.float32(), True))
+            fields.append(pa.field('lsst_rough_flux_r', pa.float32(), True))
+            fields.append(pa.field('lsst_rough_flux_i', pa.float32(), True))
+            fields.append(pa.field('lsst_rough_flux_z', pa.float32(), True))
+            fields.append(pa.field('lsst_rough_flux_y', pa.float32(), True))
+
 
     elif galaxy_type == 'diffsky':
         fields = [pa.field('galaxy_id', pa.int64()),
