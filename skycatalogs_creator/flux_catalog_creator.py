@@ -167,17 +167,6 @@ class FluxCatalogCreator:
 
         self._cat = open_catalog(self.get_config_file_path(),
                                  skycatalog_root=self._skycatalog_root)
-        if self._object_type == 'diffsky_galaxy':
-            diffsky_config = self._cat.raw_config['object_types'][
-                'diffsky_galaxy']
-            try:
-                self._galaxy_truth = diffsky_config[
-                    'provenance']['inputs']['galaxy_truth']
-            except KeyError as exc:
-                raise ValueError(
-                    'Diffsky config provenance must contain the OpenCosmo '
-                    'input path at inputs.galaxy_truth') from exc
-
         # if we're not skipping existing files (that is, we're overwriting)
         # and the catalogs are partitioned by healpixel, tell skyCatalogs
         # to ignore existing flux files for the healpixels we process
@@ -347,8 +336,7 @@ class FluxCatalogCreator:
             if n_parallel == 1:
                 # For debugging call directly
                 out_dict = _do_flux_chunk(None, _galaxy_collection,
-                                          _instrument_needed, lb, u,
-                                          'galaxy_id')
+                                          _instrument_needed, lb, u, 'galaxy_id')
             else:
                 # Expect to be able to do about 1500/minute/process
                 tm = max(int((n_per*60)/500), 5)  # Give ourselves a cushion
@@ -361,8 +349,7 @@ class FluxCatalogCreator:
                     proc = Process(target=_do_flux_chunk,
                                    name=f'proc_{i}',
                                    args=(conn_wrt, _galaxy_collection,
-                                         _instrument_needed, lb, u,
-                                         'galaxy_id'))
+                                         _instrument_needed, lb, u, 'galaxy_id'))
                     proc.start()
                     p_list.append(proc)
                     lb = u

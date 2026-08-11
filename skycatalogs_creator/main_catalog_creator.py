@@ -17,7 +17,9 @@ from .utils.star_parquet_input import _star_parquet_reader
 from .utils.parquet_schema_utils import make_galaxy_schema
 from .utils.parquet_schema_utils import make_star_schema
 from .utils.creator_utils import make_MW_extinction_av, make_MW_extinction_rv
-from .utils.diffsky_utils import materialize_diffsky_columns
+from .utils.diffsky_utils import (initialize_diffsky_runtime_state,
+                                  materialize_diffsky_columns,
+                                  write_diffsky_runtime_pixel)
 from skycatalogs.objects.star_object import StarConfigFragment
 from skycatalogs.objects.galaxy_object import GalaxyConfigFragment
 from skycatalogs.objects.diffsky_object import DiffskyConfigFragment
@@ -357,8 +359,7 @@ class MainCatalogCreator:
                 GCRCatalogs.set_root_dir(gcr_root)
                 config_path = os.path.join(ci_gcr, 'gcr_catalog_configs',
                                            'cosmodc2_galaxy_mini.yaml')
-                config_dict = GCRCatalogs.catalog_helpers.load_yaml_local(
-                    config_path)
+                config_dict = GCRCatalogs.catalog_helpers.load_yaml_local(config_path)
                 # Since the config file doesn't get read in at the usual
                 # time we have to do resolution of root dir by hand.
                 config_register = GCRCatalogs.ConfigSource.get_config_source()
@@ -385,6 +386,9 @@ class MainCatalogCreator:
             # load_diffsky_mock passes keep_top_host=True to oc.open, which is
             # required by OpenCosmo 1.3 for these catalogs.
             gal_cat, self._diffsky_aux_data = load_diffsky_mock(self._truth)
+            initialize_diffsky_runtime_state(
+                self._truth, self._output_dir,
+                overwrite=not self._skip_done)
         self._gal_cat = gal_cat
 
         # Save cosmology in case we need to write parameters out later
@@ -456,8 +460,7 @@ class MainCatalogCreator:
         writer = None
 
         while u_bnd > l_bnd:
-            out_dict = {k: dat[k][l_bnd: u_bnd]
-                        for k in dat if k not in to_rename}
+            out_dict = {k: dat[k][l_bnd: u_bnd] for k in dat if k not in to_rename}
             for k in to_rename:
                 out_dict[to_rename[k]] = dat[k][l_bnd: u_bnd]
             out_df = pd.DataFrame.from_dict(out_dict)
@@ -471,8 +474,7 @@ class MainCatalogCreator:
             u_bnd = min(l_bnd + stride, last_row_ix + 1)
 
         writer.close()
-        self._logger.debug(
-            f'# row groups written to {output_path}: {rg_written}')
+        self._logger.debug(f'# row groups written to {output_path}: {rg_written}')
 
     def create_galaxy_pixel(self, pixel, gal_cat, arrow_schema):
         """
@@ -501,8 +503,7 @@ class MainCatalogCreator:
             output_path = os.path.join(self._output_dir, f'{prefix}_{p}.parquet')
             if os.path.exists(output_path):
                 if self._skip_done:
-                    self._logger.info(
-                        f'Skipping regeneration of {output_path}')
+                    self._logger.info(f'Skipping regeneration of {output_path}')
                     skip_count = skip_count + 1
 
         if skip_count == len(out_pixels):
@@ -581,17 +582,20 @@ class MainCatalogCreator:
             # SkyCatalog file must contain only members of its ring pixel.
             in_pixel = (healpy.ang2pix(
                 32, df['ra_obs'], df['dec_obs'], lonlat=True) == pixel)
-            df = {name: np.asarray(values)[in_pixel]
+            runtime_rows = np.flatnonzero(in_pixel)
+            df = {name: np.asarray(values)[runtime_rows]
                   for name, values in df.items()}
             if self._mag_cut:
                 keep = np.asarray(df.pop('lsst_r')) < self._mag_cut
+                runtime_rows = runtime_rows[keep]
                 df = {name: np.asarray(values)[keep]
                       for name, values in df.items()}
             df = materialize_diffsky_columns(df, self._cosmology)
-        elif not self._mag_cut:
-            df = gal_cat.get_quantities(to_fetch, native_filters=hp_filter)
         else:
-            df = gal_cat.get_quantities(to_fetch + [r_mag_name],
+            if not self._mag_cut:
+                df = gal_cat.get_quantities(to_fetch, native_filters=hp_filter)
+            else:
+                df = gal_cat.get_quantities(to_fetch + [r_mag_name],
                                         native_filters=hp_filter,
                                         filters=mag_cut_filter)
 
@@ -613,13 +617,10 @@ class MainCatalogCreator:
 
             if self._knots:
                 # adjust disk sed; create knots sed
-                sed_knot_names = [i.replace('disk', 'knots')
-                                  for i in sed_disk_names]
+                sed_knot_names = [i.replace('disk', 'knots') for i in sed_disk_names]
                 eps = np.finfo(np.float32).eps
-                mag_mask = np.where(
-                    np.array(df['mag_i_lsst']) > self._knots_mag_cut, 0, 1)
-                self._logger.debug(
-                    f'Count of mags <=  cut (so adjustment performed: {np.count_nonzero(mag_mask)}')
+                mag_mask = np.where(np.array(df['mag_i_lsst']) > self._knots_mag_cut, 0, 1)
+                self._logger.debug(f'Count of mags <=  cut (so adjustment performed: {np.count_nonzero(mag_mask)}')
 
                 for d_name, k_name in zip(sed_disk_names, sed_knot_names):
                     df[k_name] = mag_mask * np.clip(df['knots_flux_ratio'],
@@ -671,17 +672,24 @@ class MainCatalogCreator:
                 self._write_subpixel(dat=compressed, output_path=output_path,
                                      arrow_schema=arrow_schema,
                                      stride=stride, to_rename=to_rename)
+                if self._galaxy_type == 'diffsky':
+                    write_diffsky_runtime_pixel(
+                        selected, runtime_rows[~val], self._output_dir, p,
+                        overwrite=not self._skip_done)
             else:
                 if self._galaxy_type in ('cosmodc2', 'skysim5000'):
                     df = self._make_tophat_columns(df, sed_disk_names, 'disk')
-                    df = self._make_tophat_columns(
-                        df, sed_bulge_names, 'bulge')
+                    df = self._make_tophat_columns(df, sed_bulge_names, 'bulge')
                     if self._knots:
                         df = self._make_tophat_columns(df, sed_knot_names,
                                                        'knots')
                 self._write_subpixel(dat=df, output_path=output_path,
                                      arrow_schema=arrow_schema,
                                      stride=stride, to_rename=to_rename)
+                if self._galaxy_type == 'diffsky':
+                    write_diffsky_runtime_pixel(
+                        selected, runtime_rows, self._output_dir, p,
+                        overwrite=not self._skip_done)
 
     def create_pointsource_catalog(self):
         """

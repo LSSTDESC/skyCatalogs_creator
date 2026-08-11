@@ -196,12 +196,15 @@ coordinates are retained as ``ra_true``/``dec_true``. It also writes the observe
 precomputed columns. Native ``r50_bulge_2d`` and ``r50_disk_2d`` are currently
 assumed to be proper physical kpc and to map one-to-one to half-light-radius.
 
-Full component SED arrays are not written by the creator. SkyCatalogs uses
-the input directory recorded in provenance to compute SEDs lazily in
-OpenCosmo host-safe batches. Bulk callers prefetch only their requested galaxy
-IDs, grouped by intrinsic HEALPix pixel, so sparse selections do not compute
-SEDs for irrelevant neighboring source rows. Flux parquet files are still
-produced normally with the established LSST and optional Roman columns.
+Full component SED arrays are not written by the creator. Instead, the creator
+writes ``diffsky_runtime`` alongside the parquet files. This directory contains
+one shared copy of the Diffsky model inputs and compact native-state shards for
+each output HEALPix pixel. SkyCatalogs therefore computes SEDs lazily in
+OpenCosmo host-safe batches without access to the original mock directory.
+Bulk callers prefetch only their requested galaxy IDs, grouped by output pixel,
+so sparse selections do not compute SEDs for irrelevant rows. Flux parquet
+files are still produced normally with the LSST and optional Roman
+columns.
 
 A complete local and Slurm-oriented Diffsky batch workflow is provided in
 ``examples/diffsky_batch``. It includes observed-pixel discovery, grouped main
