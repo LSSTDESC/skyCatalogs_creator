@@ -35,6 +35,11 @@ dependencies = [
 ]
 requires-python = ">=3.10" # For annotations; setuptools >= 61.0 support
 
+[project.optional-dependencies]
+roman = [
+    'roman-technical-information',
+]
+
 [tool.setuptools.dynamic]
 version = {attr = "skycatalogs_creator._version.__version__"}
 

@@ -12,6 +12,7 @@ import numpy as np
 import json
 from skycatalogs.objects.base_object import LSST_BANDS, load_lsst_bandpasses
 from skycatalogs.objects.base_object import load_roman_bandpasses
+from skycatalogs.objects.base_object import load_roman_bandpasses_version
 from skycatalogs.objects.trilegal_object import TrilegalConfigFragment
 from .utils.config_creator_utils import assemble_provenance
 from .utils.config_creator_utils import assemble_file_metadata
@@ -449,7 +450,8 @@ class TrilegalFluxCatalogCreator:
 
         thru_v = {'lsst_throughputs_version': self._cat._lsst_thru_v}
         if self._include_roman_flux:
-            thru_v['roman_throughputs_version'] = self._cat._roman_thru_v
+            thru_v['roman_throughputs_version'] = \
+                load_roman_bandpasses_version()
         file_metadata = assemble_file_metadata(
             self._catalog_creator._pkg_root,
             run_options=self._catalog_creator._run_options,

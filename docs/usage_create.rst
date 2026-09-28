@@ -107,8 +107,18 @@ config_path            string     None          where to write config. If
                                                 ``None``, same folder as data
 flux_parallel          int        16            # processes to run in parallel
                                                 when computing fluxes
+flux_worker_chunk_     int        100000        Maximum objects processed by a
+size                                            worker before it exits and its
+                                                native memory is reclaimed
 include_roman_flux     boolean    False         If True calculate & store Roman
                                                 as well as Rubin fluxes.
+diffsky_sed_engine     string     config value  ``fast`` or ``reference``
+diffsky_sed_precision  string     config value  ``float64`` or ``float32``;
+                                                reference requires float64
+diffsky_ssp_wave_min_  float      0.06          Fixed rest-frame SSP lower
+micron                                          bound; set with upper bound
+diffsky_ssp_wave_max_  float      2.34          Fixed rest-frame SSP upper
+micron                                          bound; set with lower bound
 log_level              string     "INFO"        Log level
 options_file           string     None          Path to file where other
                                                 options are set. Valid only
@@ -195,6 +205,9 @@ coordinates are retained as ``ra_true``/``dec_true``. It also writes the observe
 ``redshift``, component ellipticity pairs, and angular half-light radii as
 precomputed columns. Native ``r50_bulge_2d`` and ``r50_disk_2d`` are currently
 assumed to be proper physical kpc and to map one-to-one to half-light-radius.
+Rows in each Diffsky SkyCatalog pixel are written in stable
+``redshiftHubble`` order. This follows the coordinate used by the Diffsky
+light-cone shells and keeps runtime SED batches local in redshift.
 
 Full component SED arrays are not written by the creator. Instead, the creator
 writes ``diffsky_runtime`` alongside the parquet files. This directory contains
@@ -206,6 +219,26 @@ so sparse selections do not compute SEDs for irrelevant rows. Flux parquet
 files are still produced normally with the LSST and optional Roman
 columns.
 
-A complete local and Slurm-oriented Diffsky batch workflow is provided in
-``examples/diffsky_batch``. It includes observed-pixel discovery, grouped main
-catalog creation and sharded flux creation.
+The optimized ``fast`` component kernel and float32 arithmetic/storage are the
+defaults. The original public Diffsky calculation remains available with
+``--diffsky-sed-engine reference`` or ``sed_engine: reference`` in the catalog
+configuration; reference mode automatically uses float64. Diffsky calculations 
+benefit from JAX array operations, so use one process per
+task initially: multiple flux processes each compile and retain their
+own JAX executable and SSP data and reduce efficiency vs memory usage.
+
+Diffsky's SSP wavelength grid is restricted before SED generation. The
+default 0.06--2.34 micron rest-frame interval covers Rubin and Roman imaging
+for objects spanning redshift 0 through 4. The flux creator accepts custom
+bounds in microns::
+
+    create_flux.py --object-type diffsky_galaxy --pixels 9556 \
+        --diffsky-ssp-wave-min-micron 0.755 \
+        --diffsky-ssp-wave-max-micron 1.855 \
+        --skycatalog-root /path/to/output \
+        --catalog-dir diffsky_pixel_9556
+
+Simulation codes can request the same slice by setting
+``sed_ssp_wave_min_micron`` and ``sed_ssp_wave_max_micron`` in the
+``diffsky_galaxy`` section of the SkyCatalog YAML.  Both bounds must be set
+together. 

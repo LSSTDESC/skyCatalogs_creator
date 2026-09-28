@@ -18,7 +18,8 @@ from .utils.parquet_schema_utils import make_galaxy_schema
 from .utils.parquet_schema_utils import make_star_schema
 from .utils.creator_utils import make_MW_extinction_av, make_MW_extinction_rv
 from .utils.diffsky_utils import (initialize_diffsky_runtime_state,
-                                  materialize_diffsky_columns,
+                                  select_diffsky_pixel,
+                                  sort_diffsky_by_redshift,
                                   write_diffsky_runtime_pixel)
 from skycatalogs.objects.star_object import StarConfigFragment
 from skycatalogs.objects.galaxy_object import GalaxyConfigFragment
@@ -498,7 +499,10 @@ class MainCatalogCreator:
             out_pixels = [pixel]
         self._out_pixels = out_pixels
         skip_count = 0
-        prefix = 'skysim5000' if self._galaxy_type == 'skysim5000' else 'galaxy'
+        prefix = {
+            'diffsky': 'diffsky_galaxy',
+            'skysim5000': 'skysim5000',
+        }.get(self._galaxy_type, 'galaxy')
         for p in out_pixels:
             output_path = os.path.join(self._output_dir, f'{prefix}_{p}.parquet')
             if os.path.exists(output_path):
@@ -553,44 +557,10 @@ class MainCatalogCreator:
 
             to_fetch = non_sed + sed_bulge_names + sed_disk_names
 
-        elif self._galaxy_type == 'diffsky':
-            to_fetch = ['gal_id', 'ra', 'ra_obs', 'dec', 'dec_obs',
-                        'redshift_true', 'vpec',
-                        'shear1', 'shear2', 'kappa',
-                        'ellipticity_bulge', 'ellipticity_disk',
-                        'psi_bulge', 'psi_disk',
-                        'r50_bulge_2d', 'r50_disk_2d',
-                        'logsm_obs']
-
         # df is not a dataframe!  It's just a dict
         if self._galaxy_type == 'diffsky':
-            # OpenCosmo partitions on the intrinsic coordinates. Include the
-            # neighboring input pixels so galaxies lensed across a boundary
-            # are placed in the correct observed-coordinate output pixel.
-            input_ring_pixels = np.append(
-                pixel, healpy.get_all_neighbours(32, pixel, nest=False))
-            input_ring_pixels = np.unique(
-                input_ring_pixels[input_ring_pixels >= 0])
-            input_nest_pixels = healpy.ring2nest(32, input_ring_pixels)
-            selected = gal_cat.pixel_search(input_nest_pixels, nside=32)
-            if self._mag_cut:
-                to_fetch.append('lsst_r')
-            df = selected.select(to_fetch).get_data(format='numpy',
-                                                     wrap_single=True)
-            # keep_top_host=True may retain central galaxies outside the
-            # requested region for downstream Diffsky calculations. The main
-            # SkyCatalog file must contain only members of its ring pixel.
-            in_pixel = (healpy.ang2pix(
-                32, df['ra_obs'], df['dec_obs'], lonlat=True) == pixel)
-            runtime_rows = np.flatnonzero(in_pixel)
-            df = {name: np.asarray(values)[runtime_rows]
-                  for name, values in df.items()}
-            if self._mag_cut:
-                keep = np.asarray(df.pop('lsst_r')) < self._mag_cut
-                runtime_rows = runtime_rows[keep]
-                df = {name: np.asarray(values)[keep]
-                      for name, values in df.items()}
-            df = materialize_diffsky_columns(df, self._cosmology)
+            df, selected, runtime_rows = select_diffsky_pixel(
+                gal_cat, pixel, self._mag_cut, self._cosmology)
         else:
             if not self._mag_cut:
                 df = gal_cat.get_quantities(to_fetch, native_filters=hp_filter)
@@ -639,10 +609,10 @@ class MainCatalogCreator:
             subpixel_masks = {pixel: None}
 
         for p, val in subpixel_masks.items():
-            if self._galaxy_type == 'skysim5000':
-                prefix = 'skysim5000'
-            else:
-                prefix = 'galaxy'
+            prefix = {
+                'diffsky': 'diffsky_galaxy',
+                'skysim5000': 'skysim5000',
+            }.get(self._galaxy_type, 'galaxy')
             output_path = os.path.join(self._output_dir,
                                        f'{prefix}_{p}.parquet')
             if os.path.exists(output_path):
@@ -656,6 +626,12 @@ class MainCatalogCreator:
                 compressed = dict()
                 for k in df:
                     compressed[k] = ma.array(df[k], mask=val).compressed()
+
+                if self._galaxy_type == 'diffsky':
+                    selected_runtime_rows = runtime_rows[~val]
+                    compressed, selected_runtime_rows = \
+                        sort_diffsky_by_redshift(
+                            compressed, selected_runtime_rows)
 
                 if self._galaxy_type in ('cosmodc2', 'skysim5000'):
                     compressed = self._make_tophat_columns(compressed,
@@ -674,7 +650,7 @@ class MainCatalogCreator:
                                      stride=stride, to_rename=to_rename)
                 if self._galaxy_type == 'diffsky':
                     write_diffsky_runtime_pixel(
-                        selected, runtime_rows[~val], self._output_dir, p,
+                        selected, selected_runtime_rows, self._output_dir, p,
                         overwrite=not self._skip_done)
             else:
                 if self._galaxy_type in ('cosmodc2', 'skysim5000'):
@@ -683,6 +659,9 @@ class MainCatalogCreator:
                     if self._knots:
                         df = self._make_tophat_columns(df, sed_knot_names,
                                                        'knots')
+                if self._galaxy_type == 'diffsky':
+                    df, runtime_rows = sort_diffsky_by_redshift(
+                        df, runtime_rows)
                 self._write_subpixel(dat=df, output_path=output_path,
                                      arrow_schema=arrow_schema,
                                      stride=stride, to_rename=to_rename)

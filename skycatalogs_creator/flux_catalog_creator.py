@@ -1,19 +1,18 @@
 import os
-import sys
 import logging
+import traceback
 import numpy as np
-import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 from multiprocessing import Process, Pipe
 from .utils.config_creator_utils import assemble_file_metadata
 from .utils.parquet_schema_utils import make_galaxy_flux_schema
 from .utils.parquet_schema_utils import make_star_flux_schema
-from skycatalogs.objects.base_object import LSST_BANDS
-from skycatalogs.objects.base_object import ROMAN_BANDS
 from skycatalogs.objects.base_object import load_lsst_bandpasses_version
+from skycatalogs.objects.base_object import load_roman_bandpasses_version
 from .sso_catalog_creator import SsoFluxCatalogCreator
 from .trilegal_catalog_creator import TrilegalFluxCatalogCreator
+from .utils.flux_batch import calculate_flux_chunk
 
 """
 Code to create flux sky catalogs for particular object types
@@ -40,51 +39,21 @@ def _do_flux_chunk(send_conn, object_collection, instrument_needed,
     returns
                     dict with keys id, lsst_flux_u, ... lsst_flux_y
     '''
-    out_dict = {}
-
-    o_list = object_collection[l_bnd: u_bnd]
-    out_dict[id_column] = [o.get_native_attribute(id_column) for o in o_list]
-
-    if o_list and hasattr(o_list[0], 'prefetch_seds'):
-        prefetch_size = o_list[0].sed_prefetch_batch_size
-        object_batches = [o_list[start:start + prefetch_size]
-                          for start in range(0, len(o_list), prefetch_size)]
-    else:
-        object_batches = [o_list]
-
-    if 'lsst' in instrument_needed:
-        all_fluxes = []
-        roman_fluxes = []
-        for batch in object_batches:
-            if batch and hasattr(batch[0], 'prefetch_seds'):
-                batch[0].prefetch_seds(batch)
-            all_fluxes.extend(
-                o.get_LSST_fluxes(as_dict=False) for o in batch)
-            if 'roman' in instrument_needed:
-                roman_fluxes.extend(
-                    o.get_roman_fluxes(as_dict=False) for o in batch)
-        all_fluxes_transpose = zip(*all_fluxes)
-        colnames = [f'lsst_flux_{band}' for band in LSST_BANDS]
-        flux_dict = dict(zip(colnames, all_fluxes_transpose))
-        out_dict.update(flux_dict)
-
-    if 'roman' in instrument_needed:
-        if 'lsst' not in instrument_needed:
-            roman_fluxes = []
-            for batch in object_batches:
-                if batch and hasattr(batch[0], 'prefetch_seds'):
-                    batch[0].prefetch_seds(batch)
-                roman_fluxes.extend(
-                    o.get_roman_fluxes(as_dict=False) for o in batch)
-        all_fluxes_transpose = zip(*roman_fluxes)
-        colnames = [f'roman_flux_{band}' for band in ROMAN_BANDS]
-        flux_dict = dict(zip(colnames, all_fluxes_transpose))
-        out_dict.update(flux_dict)
-
-    if send_conn:
-        send_conn.send(out_dict)
-    else:
-        return out_dict
+    try:
+        out_dict = calculate_flux_chunk(
+            object_collection, instrument_needed, l_bnd, u_bnd, id_column)
+        if send_conn:
+            send_conn.send(('result', out_dict))
+        else:
+            return out_dict
+    except BaseException:
+        if send_conn:
+            send_conn.send(('error', traceback.format_exc()))
+        else:
+            raise
+    finally:
+        if send_conn:
+            send_conn.close()
 
 
 class FluxCatalogCreator:
@@ -97,7 +66,12 @@ class FluxCatalogCreator:
                  pkg_root=None,
                  skip_done=False,
                  flux_parallel=16,
+                 flux_worker_chunk_size=100000,
                  include_roman_flux=False,
+                 diffsky_ssp_wave_min_micron=0.06,
+                 diffsky_ssp_wave_max_micron=2.34,
+                 diffsky_sed_engine=None,
+                 diffsky_sed_precision=None,
                  sso_sed=None,
                  run_options=None):
         """
@@ -126,9 +100,15 @@ class FluxCatalogCreator:
                         (by default) overwrite with new version.
                         Output info message in either case if file exists.
         flux_parallel   Number of processes to divide work of computing fluxes
+        flux_worker_chunk_size Maximum number of objects computed during one
+                        worker process lifetime. Each worker exits after its
+                        chunk so native-library memory is returned to the OS.
         # dc2             Whether to adjust values to provide input comparable
         #                to that for the DC2 run
         include_roman_flux Calculate and write Roman flux values
+        diffsky_sed_engine Select the optimized ``fast`` implementation or
+                           Diffsky's public ``reference`` implementation
+        diffsky_sed_precision Arithmetic precision for the optimized engine
         sso_sed         Path to sed file to be used for all SSOs
         run_options     The options the outer script (create_sc.py) was
                         called with
@@ -179,7 +159,25 @@ class FluxCatalogCreator:
         self._logger = logging.getLogger(logname)
         self._skip_done = skip_done
         self._flux_parallel = flux_parallel
+        if flux_parallel < 1:
+            raise ValueError('flux_parallel must be at least 1')
+        if flux_worker_chunk_size < 1:
+            raise ValueError('flux_worker_chunk_size must be at least 1')
+        self._flux_worker_chunk_size = flux_worker_chunk_size
         self._include_roman_flux = include_roman_flux
+        if self._object_type == 'diffsky_galaxy' and (
+                diffsky_sed_engine is not None
+                or diffsky_sed_precision is not None):
+            factory = self._cat.observed_sed_factory('diffsky_galaxy')
+            factory.set_compute_options(
+                diffsky_sed_engine, diffsky_sed_precision)
+        if self._object_type == 'diffsky_galaxy' and (
+                diffsky_ssp_wave_min_micron is not None
+                or diffsky_ssp_wave_max_micron is not None):
+            factory = self._cat.observed_sed_factory('diffsky_galaxy')
+            factory.set_ssp_wave_bounds(
+                diffsky_ssp_wave_min_micron,
+                diffsky_ssp_wave_max_micron)
         self._obs_sed_factory = None
         self._sso_creator = SsoFluxCatalogCreator(self)
         self._trilegal_creator = TrilegalFluxCatalogCreator(self, include_roman_flux=self._include_roman_flux)
@@ -226,7 +224,7 @@ class FluxCatalogCreator:
         # Throughput versions for fluxes included
         thru_v = {'lsst_throughputs_version': load_lsst_bandpasses_version()}
         if self._include_roman_flux:
-            thru_v['roman_throughputs_version'] = self._cat._roman_thru_v
+            thru_v['roman_throughputs_version'] = load_roman_bandpasses_version()
 
         file_metadata = assemble_file_metadata(
             self._pkg_root,
@@ -252,6 +250,10 @@ class FluxCatalogCreator:
         for p in self._parts:
             self._logger.info(f'Starting on pixel {p}')
             self._create_galaxy_flux_pixel(p)
+            if self._galaxy_type == 'diffsky':
+                self._cat.observed_sed_factory(
+                    'diffsky_galaxy').clear_runtime_caches(
+                        clear_compiled=True)
             self._logger.info(f'Completed pixel {p}')
 
     def _get_needed_flux_attrs(self):
@@ -263,6 +265,81 @@ class FluxCatalogCreator:
             return ['galaxy_id', 'shear_1', 'shear_2', 'convergence',
                     'redshift_hubble', 'MW_av', 'MW_rv', 'sed_val_bulge',
                     'sed_val_disk', 'sed_val_knots']
+
+    def _write_flux_collection(self, object_collection, instrument_needed,
+                               id_column, schema, writer, output_path):
+        """Compute and write one collection using disposable workers."""
+        ranges = [
+            (lower, min(lower + self._flux_worker_chunk_size,
+                        len(object_collection)))
+            for lower in range(0, len(object_collection),
+                               self._flux_worker_chunk_size)
+        ]
+        self._logger.info(
+            f'Processing {len(object_collection):,} objects in '
+            f'{len(ranges)} disposable worker chunk(s), with up to '
+            f'{self._flux_parallel} worker(s) concurrently')
+
+        for wave_start in range(0, len(ranges), self._flux_parallel):
+            wave = ranges[wave_start:wave_start + self._flux_parallel]
+            workers = []
+            try:
+                for i, (lower, upper) in enumerate(wave):
+                    conn_rd, conn_wrt = Pipe(duplex=False)
+                    proc = Process(
+                        target=_do_flux_chunk,
+                        name=f'flux_{lower}_{upper}',
+                        args=(conn_wrt, object_collection,
+                              instrument_needed, lower, upper, id_column))
+                    proc.start()
+                    conn_wrt.close()
+                    workers.append((proc, conn_rd, lower, upper))
+
+                # Receive and write in range order so catalog ordering is
+                # deterministic even when workers finish out of order.
+                for proc, reader, lower, upper in workers:
+                    try:
+                        status, payload = reader.recv()
+                    except EOFError as exc:
+                        proc.join()
+                        raise RuntimeError(
+                            f'Flux worker for [{lower}, {upper}) exited '
+                            f'without returning a result '
+                            f'(exit code {proc.exitcode})') from exc
+                    finally:
+                        reader.close()
+                    proc.join()
+                    if proc.exitcode != 0 and status != 'error':
+                        raise RuntimeError(
+                            f'Flux worker for [{lower}, {upper}) exited with '
+                            f'code {proc.exitcode}')
+                    if status == 'error':
+                        raise RuntimeError(
+                            f'Flux worker for [{lower}, {upper}) failed:\n'
+                            f'{payload}')
+
+                    out_table = pa.Table.from_pydict(payload, schema=schema)
+                    if writer is None:
+                        writer = pq.ParquetWriter(output_path, schema)
+                    writer.write_table(out_table)
+                    del out_table, payload
+                for proc, _, _, _ in workers:
+                    proc.close()
+            except BaseException:
+                for proc, reader, _, _ in workers:
+                    reader.close()
+                    try:
+                        if proc.is_alive():
+                            proc.terminate()
+                        proc.join()
+                        proc.close()
+                    except ValueError:
+                        # The process may already have been closed after its
+                        # result was successfully written.
+                        pass
+                raise
+
+        return writer, len(ranges)
 
     def _create_galaxy_flux_pixel(self, pixel):
         '''
@@ -280,10 +357,11 @@ class FluxCatalogCreator:
 
         # Would be better to obtain output filename from config or
         # at least from object_type
-        if self._galaxy_type == 'skysim5000':
-            output_filename = f'{self._galaxy_type}_flux_{pixel}.parquet'
-        else:
-            output_filename = f'galaxy_flux_{pixel}.parquet'
+        prefix = {
+            'diffsky': 'diffsky_galaxy',
+            'skysim5000': 'skysim5000',
+        }.get(self._galaxy_type, 'galaxy')
+        output_filename = f'{prefix}_flux_{pixel}.parquet'
         output_path = os.path.join(self._output_dir, output_filename)
 
         if os.path.exists(output_path):
@@ -311,74 +389,28 @@ class FluxCatalogCreator:
 
         for object_coll in object_list.get_collections():
             _galaxy_collection = object_coll
+            needed_flux_attrs = self._get_needed_flux_attrs()
             # prefetch everything we need.
-            for att in self._get_needed_flux_attrs():
+            for att in needed_flux_attrs:
                 _ = object_coll.get_native_attribute(att)
-            l_bnd = 0
-            u_bnd = len(object_coll)
+            writer, _ = self._write_flux_collection(
+                _galaxy_collection, _instrument_needed, 'galaxy_id',
+                self._gal_flux_schema, writer, output_path)
 
-            self._logger.debug(f'Handling range {l_bnd} up to {u_bnd}')
+            if self._galaxy_type == 'diffsky':
+                self._cat.observed_sed_factory(
+                    'diffsky_galaxy').clear_sed_cache()
 
-            out_dict = {}
-            for field in self._gal_flux_needed:
-                out_dict[field] = []
-
-            n_parallel = self._flux_parallel
-
-            if n_parallel == 1:
-                n_per = u_bnd - l_bnd
-            else:
-                n_per = int((u_bnd - l_bnd + n_parallel)/n_parallel)
-            lb = l_bnd
-            u = min(l_bnd + n_per, u_bnd)
-            readers = []
-
-            if n_parallel == 1:
-                # For debugging call directly
-                out_dict = _do_flux_chunk(None, _galaxy_collection,
-                                          _instrument_needed, lb, u, 'galaxy_id')
-            else:
-                # Expect to be able to do about 1500/minute/process
-                tm = max(int((n_per*60)/500), 5)  # Give ourselves a cushion
-                self._logger.info(
-                    f'Using timeout value {tm} for {n_per} sources')
-                p_list = []
-                for i in range(n_parallel):
-                    conn_rd, conn_wrt = Pipe(duplex=False)
-                    readers.append(conn_rd)
-                    proc = Process(target=_do_flux_chunk,
-                                   name=f'proc_{i}',
-                                   args=(conn_wrt, _galaxy_collection,
-                                         _instrument_needed, lb, u, 'galaxy_id'))
-                    proc.start()
-                    p_list.append(proc)
-                    lb = u
-                    u = min(lb + n_per, u_bnd)
-
-                self._logger.debug('Processes started')
-                for i in range(n_parallel):
-                    ready = readers[i].poll(tm)
-                    if not ready:
-                        self._logger.error(
-                            f'Process {i} timed out after {tm} sec')
-                        sys.exit(1)
-                    dat = readers[i].recv()
-                    for field in self._gal_flux_needed:
-                        out_dict[field] += dat[field]
-                for p in p_list:
-                    p.join()
-
-            out_df = pd.DataFrame.from_dict(out_dict)
-            out_table = pa.Table.from_pandas(out_df,
-                                             schema=self._gal_flux_schema)
-
-            if not writer:
-                writer = pq.ParquetWriter(output_path, self._gal_flux_schema)
-            writer.write_table(out_table)
-
+            # ObjectList retains every row-group collection. Remove arrays
+            # explicitly prefetched for this calculation so they do not
+            # accumulate as later row groups are processed.
+            for att in needed_flux_attrs:
+                if hasattr(object_coll, att):
+                    delattr(object_coll, att)
             rg_written += 1
 
-        writer.close()
+        if writer is not None:
+            writer.close()
         self._logger.debug(f'# row groups written to flux file: {rg_written}')
 
     def create_pointsource_flux_catalog(self, config_file=None):
@@ -442,8 +474,6 @@ class FluxCatalogCreator:
             else:
                 self._logger.info(f'Skipping regeneration of {output_path}')
                 return
-        n_parallel = self._flux_parallel
-
         object_list = self._cat.get_object_type_by_hp(pixel, 'star')
         writer = None
         instrument_needed = []
@@ -453,71 +483,14 @@ class FluxCatalogCreator:
             if 'roman' in field and 'roman' not in instrument_needed:
                 instrument_needed.append('roman')
         rg_written = 0
-        fields_needed = self._ps_flux_schema.names
-
-        for i in range(object_list.collection_count):
-            _star_collection = object_list.get_collections()[i]
-
-            l_bnd = 0
-            u_bnd = len(_star_collection)
-
-            out_dict = {}
-            for field in fields_needed:
-                out_dict[field] = []
-
-            if n_parallel == 1:
-                n_per = u_bnd - l_bnd
-            else:
-                n_per = int((u_bnd - l_bnd + n_parallel)/n_parallel)
-
-            lb = l_bnd
-            u = min(l_bnd + n_per, u_bnd)
-            readers = []
-
-            if n_parallel == 1:
-                # For debugging call directly
-                out_dict = _do_flux_chunk(None, _star_collection,
-                                          instrument_needed, lb, u, 'id')
-            else:
-                # Expect to be able to do about 1500/minute/process
-
-                tm = max(int((n_per*60)/500), 5)  # Give ourselves a cushion
-                self._logger.info(f'Using timeout value {tm} for {n_per} sources')
-                p_list = []
-                for i in range(n_parallel):
-                    conn_rd, conn_wrt = Pipe(duplex=False)
-                    readers.append(conn_rd)
-                    proc = Process(target=_do_flux_chunk,
-                                   name=f'proc_{i}',
-                                   args=(conn_wrt, _star_collection,
-                                         instrument_needed, lb, u, 'id'))
-                    proc.start()
-                    p_list.append(proc)
-                    lb = u
-                    u = min(lb + n_per, u_bnd)
-
-                self._logger.debug('Processes started')
-                for i in range(n_parallel):
-                    ready = readers[i].poll(tm)
-                    if not ready:
-                        self._logger.error(f'Process {i} timed out after {tm} sec')
-                        sys.exit(1)
-                    dat = readers[i].recv()
-                    for field in fields_needed:
-                        out_dict[field] += dat[field]
-                for p in p_list:
-                    p.join()
-
-            out_df = pd.DataFrame.from_dict(out_dict)
-            out_table = pa.Table.from_pandas(out_df,
-                                             schema=self._ps_flux_schema)
-
-            if not writer:
-                writer = pq.ParquetWriter(output_path, self._ps_flux_schema)
-            writer.write_table(out_table)
+        for _star_collection in object_list.get_collections():
+            writer, _ = self._write_flux_collection(
+                _star_collection, instrument_needed, 'id',
+                self._ps_flux_schema, writer, output_path)
             rg_written += 1
 
-        writer.close()
+        if writer is not None:
+            writer.close()
         self._logger.debug(f'# row groups written to flux file: {rg_written}')
 
     def get_config_file_path(self):

@@ -56,12 +56,30 @@ if __name__ == '__main__':
     parser.add_argument(
         '--flux-parallel', default=16, type=int,
         help='Number of processes to run in parallel when computing fluxes')
+    parser.add_argument(
+        '--flux-worker-chunk-size', default=100000, type=int,
+        help='Maximum objects computed by each disposable flux worker. '
+             'The worker exits after the chunk to release native memory')
     parser.add_argument('--options-file', default=None, help='''
                     path to yaml file associating option names with values.
                     Values for any options included will take precedence.''')
     parser.add_argument(
         '--include-roman-flux', action='store_true',
         help='If supplied calculate & store Roman as well as LSST  fluxes')
+    parser.add_argument(
+        '--diffsky-ssp-wave-min-micron', type=float, default=0.06,
+        help='Lower SSP wavelength bound for Diffsky SED generation '
+             '(default: 0.06 micron)')
+    parser.add_argument(
+        '--diffsky-ssp-wave-max-micron', type=float, default=2.34,
+        help='Upper SSP wavelength bound for Diffsky SED generation '
+             '(default: 2.34 micron)')
+    parser.add_argument(
+        '--diffsky-sed-engine', choices=('fast', 'reference'),
+        help='Override the configured Diffsky component SED engine')
+    parser.add_argument(
+        '--diffsky-sed-precision', choices=('float64', 'float32'),
+        help='Override arithmetic precision for the fast Diffsky SED engine')
     parser.add_argument('--sso-sed', default=None, help='''
                     path to two-column text file containing SED to be used
                     for all SSOs''')
@@ -117,7 +135,17 @@ if __name__ == '__main__':
                                  logname=logname,
                                  skip_done=args.skip_done,
                                  flux_parallel=args.flux_parallel,
+                                 flux_worker_chunk_size=
+                                 args.flux_worker_chunk_size,
                                  include_roman_flux=args.include_roman_flux,
+                                 diffsky_ssp_wave_min_micron=
+                                 args.diffsky_ssp_wave_min_micron,
+                                 diffsky_ssp_wave_max_micron=
+                                 args.diffsky_ssp_wave_max_micron,
+                                 diffsky_sed_engine=
+                                 args.diffsky_sed_engine,
+                                 diffsky_sed_precision=
+                                 args.diffsky_sed_precision,
                                  sso_sed=args.sso_sed,
                                  run_options=opt_dict)
     if len(parts) > 0:
