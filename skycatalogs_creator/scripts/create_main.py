@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser(
     Create main Sky Catalogs for specified object type.''',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('object_type',
-                    choices=['star', 'cosmodc2_galaxy', 'diffsky_galaxy',
+                    choices=['star', 'cosmodc2_galaxy', 'diffsky26_galaxy',
                              'skysim5000', 'sso', 'trilegal'],
                     help='Object type for which catalog is to be created')
 parser.add_argument('--pixels', type=int, nargs='*', default=[9556],

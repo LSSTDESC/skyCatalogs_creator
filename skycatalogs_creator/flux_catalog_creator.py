@@ -79,7 +79,7 @@ class FluxCatalogCreator:
 
         Parameters
         ----------
-        object_type     'cosmodc2_galaxy', 'skysim5000', 'diffsky_galaxy',
+        object_type     'cosmodc2_galaxy', 'skysim5000', 'diffsky26_galaxy',
                         'star', 'sso' or 'trilegal'
         parts           Segments for which catalog is to be generated. If
                         partition type is HEALpix, parts will be a collection
@@ -165,16 +165,16 @@ class FluxCatalogCreator:
             raise ValueError('flux_worker_chunk_size must be at least 1')
         self._flux_worker_chunk_size = flux_worker_chunk_size
         self._include_roman_flux = include_roman_flux
-        if self._object_type == 'diffsky_galaxy' and (
+        if self._object_type == 'diffsky26_galaxy' and (
                 diffsky_sed_engine is not None
                 or diffsky_sed_precision is not None):
-            factory = self._cat.observed_sed_factory('diffsky_galaxy')
+            factory = self._cat.observed_sed_factory('diffsky26_galaxy')
             factory.set_compute_options(
                 diffsky_sed_engine, diffsky_sed_precision)
-        if self._object_type == 'diffsky_galaxy' and (
+        if self._object_type == 'diffsky26_galaxy' and (
                 diffsky_ssp_wave_min_micron is not None
                 or diffsky_ssp_wave_max_micron is not None):
-            factory = self._cat.observed_sed_factory('diffsky_galaxy')
+            factory = self._cat.observed_sed_factory('diffsky26_galaxy')
             factory.set_ssp_wave_bounds(
                 diffsky_ssp_wave_min_micron,
                 diffsky_ssp_wave_max_micron)
@@ -193,7 +193,8 @@ class FluxCatalogCreator:
         None
         """
         object_type = self._object_type
-        if object_type in {'cosmodc2_galaxy', 'diffsky_galaxy', 'skysim5000'}:
+        if object_type in {'cosmodc2_galaxy', 'diffsky26_galaxy',
+                           'skysim5000'}:
             self.create_galaxy_flux_catalog()
         elif object_type == ('star'):
             self.create_pointsource_flux_catalog()
@@ -238,8 +239,8 @@ class FluxCatalogCreator:
                                     metadata_input=file_metadata)
         self._gal_flux_needed = [field.name for field in self._gal_flux_schema]
 
-        if self._galaxy_type == 'diffsky':
-            type_field = 'diffsky_galaxy'
+        if self._galaxy_type == 'diffsky26':
+            type_field = 'diffsky26_galaxy'
         elif self._galaxy_type == 'skysim5000':
             type_field = self._galaxy_type
         else:
@@ -250,14 +251,14 @@ class FluxCatalogCreator:
         for p in self._parts:
             self._logger.info(f'Starting on pixel {p}')
             self._create_galaxy_flux_pixel(p)
-            if self._galaxy_type == 'diffsky':
+            if self._galaxy_type == 'diffsky26':
                 self._cat.observed_sed_factory(
-                    'diffsky_galaxy').clear_runtime_caches(
+                    'diffsky26_galaxy').clear_runtime_caches(
                         clear_compiled=True)
             self._logger.info(f'Completed pixel {p}')
 
     def _get_needed_flux_attrs(self):
-        if self._galaxy_type == 'diffsky':
+        if self._galaxy_type == 'diffsky26':
             return ['galaxy_id', 'shear1', 'shear2', 'convergence',
                     'redshiftHubble', 'ra_true', 'dec_true',
                     'MW_av', 'MW_rv']
@@ -268,7 +269,13 @@ class FluxCatalogCreator:
 
     def _write_flux_collection(self, object_collection, instrument_needed,
                                id_column, schema, writer, output_path):
-        """Compute and write one collection using disposable workers."""
+        """Compute one collection using disposable workers and write it.
+
+        SkyCatalogs applies masks made from main-catalog row groups to the
+        corresponding row group in every companion file.  Worker chunks must
+        therefore be combined before writing so that the flux file preserves
+        the main catalog's row-group boundaries.
+        """
         ranges = [
             (lower, min(lower + self._flux_worker_chunk_size,
                         len(object_collection)))
@@ -280,6 +287,7 @@ class FluxCatalogCreator:
             f'{len(ranges)} disposable worker chunk(s), with up to '
             f'{self._flux_parallel} worker(s) concurrently')
 
+        chunk_tables = []
         for wave_start in range(0, len(ranges), self._flux_parallel):
             wave = ranges[wave_start:wave_start + self._flux_parallel]
             workers = []
@@ -318,11 +326,9 @@ class FluxCatalogCreator:
                             f'Flux worker for [{lower}, {upper}) failed:\n'
                             f'{payload}')
 
-                    out_table = pa.Table.from_pydict(payload, schema=schema)
-                    if writer is None:
-                        writer = pq.ParquetWriter(output_path, schema)
-                    writer.write_table(out_table)
-                    del out_table, payload
+                    chunk_tables.append(
+                        pa.Table.from_pydict(payload, schema=schema))
+                    del payload
                 for proc, _, _, _ in workers:
                     proc.close()
             except BaseException:
@@ -338,6 +344,21 @@ class FluxCatalogCreator:
                         # result was successfully written.
                         pass
                 raise
+
+        if chunk_tables:
+            collection_table = pa.concat_tables(chunk_tables)
+            if collection_table.num_rows != len(object_collection):
+                raise RuntimeError(
+                    'Flux workers returned '
+                    f'{collection_table.num_rows:,} rows for a '
+                    f'{len(object_collection):,}-object collection')
+            if writer is None:
+                writer = pq.ParquetWriter(output_path, schema)
+            # One write per source collection preserves the row-group index
+            # and row count shared by the main and companion flux files.
+            writer.write_table(
+                collection_table, row_group_size=len(object_collection))
+            del collection_table, chunk_tables
 
         return writer, len(ranges)
 
@@ -358,7 +379,7 @@ class FluxCatalogCreator:
         # Would be better to obtain output filename from config or
         # at least from object_type
         prefix = {
-            'diffsky': 'diffsky_galaxy',
+            'diffsky26': 'diffsky26_galaxy',
             'skysim5000': 'skysim5000',
         }.get(self._galaxy_type, 'galaxy')
         output_filename = f'{prefix}_flux_{pixel}.parquet'
@@ -397,9 +418,9 @@ class FluxCatalogCreator:
                 _galaxy_collection, _instrument_needed, 'galaxy_id',
                 self._gal_flux_schema, writer, output_path)
 
-            if self._galaxy_type == 'diffsky':
+            if self._galaxy_type == 'diffsky26':
                 self._cat.observed_sed_factory(
-                    'diffsky_galaxy').clear_sed_cache()
+                    'diffsky26_galaxy').clear_sed_cache()
 
             # ObjectList retains every row-group collection. Remove arrays
             # explicitly prefetched for this calculation so they do not

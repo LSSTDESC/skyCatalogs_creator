@@ -249,9 +249,23 @@ class ConfigWriter:
         top_path = os.path.join(self._out_dir, self._top_name + '.yaml')
 
         top = _read_yaml(top_path, silent=True, resolve_include=False)
+        object_type = config_fragment.object_type
+        exclusive_diffsky_type = {
+            'diffsky_galaxy': 'diffsky26_galaxy',
+            'diffsky26_galaxy': 'diffsky_galaxy',
+        }.get(object_type)
         if top:
             top_exists = True
-            object_type_exists = config_fragment.object_type in top['object_types']
+            if exclusive_diffsky_type in top['object_types']:
+                if not overwrite:
+                    raise RuntimeError(
+                        f'{object_type} cannot be added while '
+                        f'{exclusive_diffsky_type} is present in {top_path}')
+                self._logger.info(
+                    'Replacing mutually exclusive object type %s with %s '
+                    'in %s', exclusive_diffsky_type, object_type, top_path)
+                del top['object_types'][exclusive_diffsky_type]
+            object_type_exists = object_type in top['object_types']
             schema_version = self.find_schema_version(top)
         else:
             top_exists = False
@@ -274,7 +288,6 @@ class ConfigWriter:
         self.write_yaml(frag, frag_path)
 
         # Write or update top file if necessary
-        object_type = config_fragment.object_type
         value = IncludeValue(fragment_name)
         yaml.add_representer(IncludeValue, include_representer)
         if top_exists and not overwrite:

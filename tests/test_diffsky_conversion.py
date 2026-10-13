@@ -1,6 +1,10 @@
 import numpy as np
+import yaml
 from astropy.cosmology import FlatLambdaCDM
+from skycatalogs.objects.diffsky_object import Diffsky26ConfigFragment
+from skycatalogs.utils.config_utils import CURRENT_SCHEMA_VERSION
 
+from skycatalogs_creator.utils.config_creator_utils import ConfigWriter, _read_yaml
 from skycatalogs_creator.utils.diffsky_utils import (
     DIFFSKY_RUNTIME_COLUMNS,
     angular_size_arcsec,
@@ -105,5 +109,24 @@ def test_materialize_diffsky_columns_uses_stable_schema_names():
     np.testing.assert_allclose(result['um_source_galaxy_obs_sm'], 10**10.5)
 
     schema_names = set(make_galaxy_schema(
-        'test', galaxy_type='diffsky').names)
+        'test', galaxy_type='diffsky26').names)
     assert set(result).union({'MW_rv', 'MW_av'}) == schema_names
+
+
+def test_diffsky26_config_replaces_stale_legacy_entry(tmp_path):
+    top_path = tmp_path / 'skyCatalog.yaml'
+    top_path.write_text(yaml.dump({
+        'schema_version': CURRENT_SCHEMA_VERSION,
+        'object_types': {
+            'diffsky_galaxy': '!include diffsky_galaxy.yaml',
+        },
+    }))
+    writer = ConfigWriter(
+        str(tmp_path), '.', 'skyCatalog', overwrite=True)
+
+    writer.write_configs(Diffsky26ConfigFragment(
+        {}, {'H0': 70.0, 'Om0': 0.3}))
+
+    top = _read_yaml(top_path, resolve_include=False)
+    assert 'diffsky_galaxy' not in top['object_types']
+    assert 'diffsky26_galaxy' in top['object_types']

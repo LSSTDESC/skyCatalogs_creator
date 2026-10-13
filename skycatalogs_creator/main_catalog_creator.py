@@ -23,7 +23,7 @@ from .utils.diffsky_utils import (initialize_diffsky_runtime_state,
                                   write_diffsky_runtime_pixel)
 from skycatalogs.objects.star_object import StarConfigFragment
 from skycatalogs.objects.galaxy_object import GalaxyConfigFragment
-from skycatalogs.objects.diffsky_object import DiffskyConfigFragment
+from skycatalogs.objects.diffsky_object import Diffsky26ConfigFragment
 from skycatalogs.objects.base_object import load_lsst_bandpasses
 from skycatalogs.objects.base_object import load_lsst_bandpasses_version
 from .sso_catalog_creator import SsoMainCatalogCreator
@@ -168,7 +168,7 @@ class MainCatalogCreator:
 
         Parameters
         ----------
-        object_type     One of {"star", "cosmodc_galaxy", "diffsky_galaxy",
+        object_type     One of {"star", "cosmodc_galaxy", "diffsky26_galaxy",
                         "sso", "trilegal"}
         parts           Segments for which catalog is to be generated. If
                         partition type is HEALpix, parts will be a collection
@@ -318,7 +318,8 @@ class MainCatalogCreator:
         None
         """
         object_type = self._object_type
-        if object_type in {'cosmodc2_galaxy', 'diffsky_galaxy', 'skysim5000'}:
+        if object_type in {'cosmodc2_galaxy', 'diffsky26_galaxy',
+                           'skysim5000'}:
             self.create_galaxy_catalog()
         elif object_type == ('star'):
             self.create_pointsource_catalog()
@@ -377,7 +378,7 @@ class MainCatalogCreator:
                     'No GCR_CI catalog is available for skysim5000')
             gal_cat = GCRCatalogs.load_catalog(self._truth)
         else:
-            self._galaxy_type = 'diffsky'
+            self._galaxy_type = 'diffsky26'
             if self._truth is None:
                 raise ValueError(
                     'Diffsky input must be the path to an OpenCosmo catalog '
@@ -419,11 +420,11 @@ class MainCatalogCreator:
                                    inputs=inputs,
                                    run_options=self._run_options)
         cosmo = assemble_cosmology(self._cosmology)
-        if self._galaxy_type == 'diffsky':
+        if self._galaxy_type == 'diffsky26':
             area_partition = {
                 'type': 'healpix', 'ordering': 'ring', 'nside': self._nside,
             }
-            fragment = DiffskyConfigFragment(
+            fragment = Diffsky26ConfigFragment(
                 prov, cosmo, area_partition=area_partition)
             self._config_writer.write_configs(fragment)
         elif self._galaxy_type == 'skysim5000':
@@ -500,7 +501,7 @@ class MainCatalogCreator:
         self._out_pixels = out_pixels
         skip_count = 0
         prefix = {
-            'diffsky': 'diffsky_galaxy',
+            'diffsky26': 'diffsky26_galaxy',
             'skysim5000': 'skysim5000',
         }.get(self._galaxy_type, 'galaxy')
         for p in out_pixels:
@@ -558,7 +559,7 @@ class MainCatalogCreator:
             to_fetch = non_sed + sed_bulge_names + sed_disk_names
 
         # df is not a dataframe!  It's just a dict
-        if self._galaxy_type == 'diffsky':
+        if self._galaxy_type == 'diffsky26':
             df, selected, runtime_rows = select_diffsky_pixel(
                 gal_cat, pixel, self._mag_cut, self._cosmology)
         else:
@@ -610,7 +611,7 @@ class MainCatalogCreator:
 
         for p, val in subpixel_masks.items():
             prefix = {
-                'diffsky': 'diffsky_galaxy',
+                'diffsky26': 'diffsky26_galaxy',
                 'skysim5000': 'skysim5000',
             }.get(self._galaxy_type, 'galaxy')
             output_path = os.path.join(self._output_dir,
@@ -627,7 +628,7 @@ class MainCatalogCreator:
                 for k in df:
                     compressed[k] = ma.array(df[k], mask=val).compressed()
 
-                if self._galaxy_type == 'diffsky':
+                if self._galaxy_type == 'diffsky26':
                     selected_runtime_rows = runtime_rows[~val]
                     compressed, selected_runtime_rows = \
                         sort_diffsky_by_redshift(
@@ -648,7 +649,7 @@ class MainCatalogCreator:
                 self._write_subpixel(dat=compressed, output_path=output_path,
                                      arrow_schema=arrow_schema,
                                      stride=stride, to_rename=to_rename)
-                if self._galaxy_type == 'diffsky':
+                if self._galaxy_type == 'diffsky26':
                     write_diffsky_runtime_pixel(
                         selected, selected_runtime_rows, self._output_dir, p,
                         overwrite=not self._skip_done)
@@ -659,13 +660,13 @@ class MainCatalogCreator:
                     if self._knots:
                         df = self._make_tophat_columns(df, sed_knot_names,
                                                        'knots')
-                if self._galaxy_type == 'diffsky':
+                if self._galaxy_type == 'diffsky26':
                     df, runtime_rows = sort_diffsky_by_redshift(
                         df, runtime_rows)
                 self._write_subpixel(dat=df, output_path=output_path,
                                      arrow_schema=arrow_schema,
                                      stride=stride, to_rename=to_rename)
-                if self._galaxy_type == 'diffsky':
+                if self._galaxy_type == 'diffsky26':
                     write_diffsky_runtime_pixel(
                         selected, runtime_rows, self._output_dir, p,
                         overwrite=not self._skip_done)

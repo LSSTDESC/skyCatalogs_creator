@@ -122,7 +122,7 @@ def _compact_runtime_state(value):
 def initialize_diffsky_runtime_state(source_dir, output_dir, overwrite=False):
     """Copy the shared Diffsky model inputs into the SkyCatalog directory."""
     source_dir = Path(source_dir)
-    runtime_dir = Path(output_dir) / 'diffsky_runtime'
+    runtime_dir = Path(output_dir) / 'diffsky26_runtime'
     runtime_dir.mkdir(parents=True, exist_ok=True)
     aux_paths = [path for path in source_dir.glob('*.hdf5')
                  if not path.stem.endswith('diffsky_gals')]
@@ -141,7 +141,7 @@ def write_diffsky_runtime_pixel(selected, row_indices, output_dir, pixel,
     """Write minimal native Diffsky state needed by one output pixel."""
     import opencosmo as oc
 
-    pixel_dir = Path(output_dir) / 'diffsky_runtime' / f'pixel_{pixel}'
+    pixel_dir = Path(output_dir) / 'diffsky26_runtime' / f'pixel_{pixel}'
     if pixel_dir.exists():
         if not overwrite:
             return pixel_dir

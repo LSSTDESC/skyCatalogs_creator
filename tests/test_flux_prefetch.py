@@ -103,4 +103,7 @@ def test_collection_uses_disposable_chunks_and_preserves_order(tmp_path):
     assert chunks == 3
     assert table.num_rows == 7
     assert table.column('galaxy_id').to_pylist() == list(range(7))
-    assert pq.ParquetFile(output_path).num_row_groups == 3
+    # Disposable calculation chunks must not change the row-group structure
+    # expected by SkyCatalogs companion-file reads.
+    assert pq.ParquetFile(output_path).num_row_groups == 1
+    assert pq.ParquetFile(output_path).metadata.row_group(0).num_rows == 7

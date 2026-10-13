@@ -40,7 +40,7 @@ positional parameter) and change all underscores to hyphens.
 Name                   Datatype   Default       Description
 =====================  =========  ============  ===============================
 object_type            string                   Required. One of {star, sso,
-                                                cosmodc2_galaxy, diffsky_galaxy,
+                                                cosmodc2_galaxy, diffsky26_galaxy,
                                                 trilegal}
 catalog_dir            string     "."           Location of catalog relative
                                                 to skycatalog_root
@@ -96,7 +96,7 @@ On the command line, prepend ``--`` and change all underscores to hyphens.
 Name                   Datatype   Default       Description
 =====================  =========  ============  ===============================
 object_type            string                   Required. One of {star, sso,
-                                                cosmodc2_galaxy, diffsky_galaxy,
+                                                cosmodc2_galaxy, diffsky26_galaxy,
                                                 trilegal}
 catalog_dir            string     "."           Location of catalog relative
                                                 to skycatalog_root
@@ -184,11 +184,11 @@ so use something higher to make the process go faster.
 Diffsky OpenCosmo input
 -----------------------
 
-For ``diffsky_galaxy``, ``--truth`` is the path to the directory containing
+For ``diffsky26_galaxy``, ``--truth`` is the path to the directory containing
 the current Diffsky OpenCosmo catalog and its auxiliary data.  For
 example::
 
-    create_main.py diffsky_galaxy --truth /path/to/diffsky_mock --pixels 9556
+    create_main.py diffsky26_galaxy --truth /path/to/diffsky_mock --pixels 9556
 
 The Diffsky loader opens the catalog with ``keep_top_host=True``, as required
 by OpenCosmo 1.3.  Extra host rows retained for Diffsky calculations are not
@@ -210,7 +210,7 @@ Rows in each Diffsky SkyCatalog pixel are written in stable
 light-cone shells and keeps runtime SED batches local in redshift.
 
 Full component SED arrays are not written by the creator. Instead, the creator
-writes ``diffsky_runtime`` alongside the parquet files. This directory contains
+writes ``diffsky26_runtime`` alongside the parquet files. This directory contains
 one shared copy of the Diffsky model inputs and compact native-state shards for
 each output HEALPix pixel. SkyCatalogs therefore computes SEDs lazily in
 OpenCosmo host-safe batches without access to the original mock directory.
@@ -232,7 +232,7 @@ default 0.06--2.34 micron rest-frame interval covers Rubin and Roman imaging
 for objects spanning redshift 0 through 4. The flux creator accepts custom
 bounds in microns::
 
-    create_flux.py --object-type diffsky_galaxy --pixels 9556 \
+    create_flux.py --object-type diffsky26_galaxy --pixels 9556 \
         --diffsky-ssp-wave-min-micron 0.755 \
         --diffsky-ssp-wave-max-micron 1.855 \
         --skycatalog-root /path/to/output \
@@ -240,5 +240,5 @@ bounds in microns::
 
 Simulation codes can request the same slice by setting
 ``sed_ssp_wave_min_micron`` and ``sed_ssp_wave_max_micron`` in the
-``diffsky_galaxy`` section of the SkyCatalog YAML.  Both bounds must be set
+``diffsky26_galaxy`` section of the SkyCatalog YAML.  Both bounds must be set
 together. 

@@ -85,7 +85,7 @@ def make_galaxy_schema(logname, knots=True,
             fields.append(pa.field('lsst_rough_flux_y', pa.float32(), True))
 
 
-    elif galaxy_type == 'diffsky':
+    elif galaxy_type == 'diffsky26':
         fields = [pa.field('galaxy_id', pa.int64()),
                   pa.field('ra', pa.float64(), True),
                   # metadata={"units" : "radians"}),

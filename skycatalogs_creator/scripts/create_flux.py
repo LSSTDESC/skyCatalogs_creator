@@ -26,7 +26,8 @@ if __name__ == '__main__':
     Create flux Sky Catalogs for specified object type''',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--object-type',
-                        choices=['star', 'cosmodc2_galaxy', 'diffsky_galaxy',
+                        choices=['star', 'cosmodc2_galaxy',
+                                 'diffsky26_galaxy',
                                  'sso', 'trilegal', 'skysim5000'],
                         help='Object type for which catalog is to be created')
     parser.add_argument(
